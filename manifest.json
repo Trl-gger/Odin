@@ -1,7 +1,7 @@
 {
-  "name": "Rogue",
-  "short_name": "Rogue",
-  "description": "Weighted calisthenics tracker. Track. Lift. Progress.",
+  "name": "Odin",
+  "short_name": "Odin",
+  "description": "Weighted & bodyweight calisthenics tracker",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#0a0a0a",
