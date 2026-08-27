@@ -1,86 +1,58 @@
-# ROGUE
-https://trl-gger.github.io/Rogue/
+# ODIN
+https://trl-gger.github.io/Odin/
 ### Weighted Calisthenics Tracker
-
-Built this for myself. Tired of doing increment math in my notes app between sets.
-
-Log your reps and RIR. App tells you what weight to use next session. That's it.
-
+Built this for myself. Tracking four sessions a week across two different training stimuli got messy in notes.
+Log your reps and RIR on skill days. App tells you what weight to use next session. That's it.
 ---
-
 ## The Programme
-
-Based on my own weighted calisthenics programme, which draws heavily from the Mathew Zlat system. The increment tables and phase structure are adapted from his work but tweaked for how I actually train.
-
+Four training days a week built around weighted pull-ups and dips. Two skill sessions, two hypertrophy sessions, three rest days.
+| Day | Session |
+|---|---|
+| Monday | Skill A |
+| Tuesday | Rest |
+| Wednesday | Skill B |
+| Thursday | Rest |
+| Friday | Hypertrophy A |
+| Saturday | Hypertrophy B |
+| Sunday | Rest |
 ---
-
-## Exercises
-
-| Exercise | Day | Type |
-|---|---|---|
-| Weighted Pull-ups | Monday / Friday | Heavy |
-| Weighted Dips | Monday / Friday | Heavy |
-| Weighted Chin-ups | Wednesday | Assistance |
-| Paused Weighted Dips | Wednesday | Assistance |
-| Muscle-ups / OAC / OAP | Saturday | Skill |
-
-Paused Dips weight derives automatically from Dips. Chin-ups and Pull-ups progress independently.
-
-Accessory Pull-ups on Tuesday/Thursday and Accessory Chin-ups on weekends are logged as completion-only — no weight, no reps, just done.
-
-Saturday Skill Sessions unlock when pull-ups or chin-ups reach Intermediate. Muscle-ups every week, alternating between One-Arm Chin-up and One-Arm Pull-up. Reps-only logging — no progression engine, no stall detection.
-
+## Sessions
+**Skill A** — Weighted pull-ups 3×6, weighted dips 3×6, high pull-ups 4×1. The only session where weight progresses.
+**Skill B** — Same movements, cluster structure: 6×3. Weight mirrors Skill A automatically. No RIR logging.
+**Hypertrophy A** — Pull-ups EMOM (configurable reps and duration in Settings), weighted dips 10×6 at a fixed hypertrophy weight.
+**Hypertrophy B** — Pull-up pyramid (1→2→3→4→5→4→3→2→1, done twice = 50 reps), weighted dips 10×2 at the same fixed hypertrophy weight.
 ---
-
 ## How Progression Works
-
-Onboarding places you in Novice or Advanced Novice. Intermediate is earned through the stall detection system, not assigned upfront — you move up when deloads genuinely stop working, not before.
-
-The engine tracks stalls per exercise, suggests deloads, and flags phase transitions. Nothing changes without your confirmation.
-
+Only Skill A progresses. After each session, pull-up and dip weight update independently based on the lowest RIR logged that session.
+| RIR | Increment |
+|---|---|
+| 3+ | +2.5 kg |
+| 2 | +1.25 kg |
+| 1 | +0.5 kg |
+| 0 or failed | hold |
 ---
-
 ## Features
-
-- RIR-based autoregulation
-- Per-exercise stall detection and deload suggestions
-- Phase transitions you confirm manually
-- Bodyweight tracking with % BW lifted graph per exercise
-- 1RM estimate updated after every session
-- Saturday skill sessions (Muscle-ups, OAC/OAP) with form-break exit
-- Full session history filtered by Heavy / Assistance / Skill
+- RIR-based autoregulation on Skill A
+- Skill B weight mirrors Skill A automatically
+- Configurable EMOM prescription (reps per minute, duration)
+- Bodyweight tracking with % BW lifted graph
+- 1RM estimate updated after every Skill A session
+- Full session history
 - JSON export and import — including on the onboarding screen
-- Automatic backup reminder every 10 sessions
 - Works offline, PWA, add to home screen
-
 ---
-
 ## Installation
-
 Open the URL in Safari, tap Share → Add to Home Screen. Works offline after first load.
-
 To run your own copy — fork the repo, enable GitHub Pages on main branch, done.
-
 ---
-
 ## Your Data
-
 Everything in localStorage. Nothing sent anywhere. Export JSON regularly — Settings has a one-tap export. If you clear browser data you lose everything.
-
 ---
-
 ## Tech
-
 Single HTML file. Vanilla JS. No frameworks. No build step. Service Worker for offline. GitHub Pages for hosting.
-
 ---
-
-## Credit
-
-Progression logic adapted from the Mathew Zlat weighted calisthenics system. Buy his programme if you're serious about this.
-
+## Related
+Forked from [Rogue](https://github.com/trl-gger/Rogue) — my Mathew Zlat based tracker.
 ---
-
 This project is licensed under CC BY-NC 4.0 — free for personal use, not for commercial purposes.
 https://creativecommons.org/licenses/by-nc/4.0/
-
