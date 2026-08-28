@@ -1772,12 +1772,10 @@
             <div class="weight-card-header">
               <div>
                 <div class="weight-card-title">Hypertrophy — Weighted Dips</div>
-                <div class="weight-card-sub">Fri (10 sets × 6 reps) &amp; Sat (10 sets × 2 reps)</div>
+                <div class="weight-card-sub">Auto-calculated: 50% of Skill A dip weight</div>
               </div>
             </div>
-            <div class="input-hint">Hypertrophy weight (kg added)</div>
-            <input class="input-field" id="input-hyp-dips" type="text" inputmode="decimal" min="0" max="200" step="0.5"
-              placeholder="e.g. 30" value="30" autocomplete="off" />
+            <div style="font-size:13px;color:var(--muted);padding:8px 0;">Weight is set automatically — no input needed.</div>
           </div>
           <div class="weight-card">
             <div class="weight-card-header">
@@ -2074,10 +2072,14 @@
     // ODIN ENGINE IMPLEMENTATION
     // ═══════════════════════════════════════════════════════════════
 
-    const APP_VERSION = '1.0.1';
-    const BUILD_TIMESTAMP = '2026-08-27 23:08';
+    const APP_VERSION = '1.0.2';
+    const BUILD_TIMESTAMP = '2026-08-28 10:20';
 
     function roundToHalf(value) { return Math.round((value || 0) * 2) / 2; }
+    function roundTo125(value) { return Math.round((value || 0) / 1.25) * 1.25; }
+
+    // Auto-calculate hypertrophy dip weight: 50% of Skill A dip weight, rounded to nearest 1.25kg
+    function getHypDipWeight(data) { return roundTo125((data.exercises.dips.currentWeight || 0) * 0.5); }
     function parseWeight(val) { return parseFloat((val || '').toString().replace(',', '.')); }
     function fmtWeight(v) { return parseFloat((v || 0).toFixed(2)).toString(); }
 
@@ -2093,7 +2095,6 @@
           bodyweightHistory: [],
           setupDate: null,
           exportReminderCount: 0,
-          hypDipWeight: 30,
           emomRepsPerMin: 3,
           emomDurationMins: 30
         },
@@ -2114,7 +2115,7 @@
         if (!r) return null;
         const data = JSON.parse(r);
         if (!data.profile) data.profile = {};
-        if (data.profile.hypDipWeight === undefined) data.profile.hypDipWeight = 30;
+        if (data.profile.hypDipWeight !== undefined) delete data.profile.hypDipWeight;
         if (data.profile.emomRepsPerMin === undefined) data.profile.emomRepsPerMin = 3;
         if (data.profile.emomDurationMins === undefined) data.profile.emomDurationMins = 30;
         if (!data.profile.bodyweightHistory) data.profile.bodyweightHistory = [];
@@ -2217,13 +2218,11 @@
       const bwInp = document.getElementById('input-bodyweight');
       const pInp = document.getElementById('input-pullups');
       const dInp = document.getElementById('input-dips');
-      const hdInp = document.getElementById('input-hyp-dips');
 
       if (nameInp && state.weights.name) nameInp.value = state.weights.name;
       if (bwInp && state.weights.bodyweight) bwInp.value = state.weights.bodyweight;
       if (pInp && state.weights.pullups) pInp.value = state.weights.pullups;
       if (dInp && state.weights.dips) dInp.value = state.weights.dips;
-      if (hdInp && state.weights.hypDips) hdInp.value = state.weights.hypDips;
 
       updateWeightDisplays();
     }
@@ -2235,39 +2234,32 @@
 
       const pInp = document.getElementById('input-pullups');
       const dInp = document.getElementById('input-dips');
-      const hdInp = document.getElementById('input-hyp-dips');
 
       const pVal = parseWeight(pInp?.value);
       const dVal = parseWeight(dInp?.value);
-      const hdVal = parseWeight(hdInp?.value);
 
       const validP = pInp?.value.trim() !== '' && !isNaN(pVal) && pVal >= 0;
       const validD = dInp?.value.trim() !== '' && !isNaN(dVal) && dVal >= 0;
-      const validHD = hdInp?.value.trim() !== '' && !isNaN(hdVal) && hdVal >= 0;
 
       if (bwInp) state.weights.bodyweight = bwInp.value;
       if (pInp) state.weights.pullups = pInp.value;
       if (dInp) state.weights.dips = dInp.value;
-      if (hdInp) state.weights.hypDips = hdInp.value;
       const nameInp = document.getElementById('input-name');
       if (nameInp) state.weights.name = nameInp.value;
 
-      document.getElementById('btn-confirm-weights').disabled = !(bwValid && validP && validD && validHD);
+      document.getElementById('btn-confirm-weights').disabled = !(bwValid && validP && validD);
     }
 
     function completeOnboarding() {
       const nameVal = (document.getElementById('input-name')?.value || '').trim();
       const bw = parseWeight(document.getElementById('input-bodyweight')?.value) || 0;
-      const pv = parseWeight(document.getElementById('input-pullups')?.value) || 0;
-      const dv = parseWeight(document.getElementById('input-dips')?.value) || 0;
-      const hdv = parseWeight(document.getElementById('input-hyp-dips')?.value);
-      const hypDipWeight = !isNaN(hdv) ? hdv : 30;
+      const pv = roundTo125(parseWeight(document.getElementById('input-pullups')?.value) || 0);
+      const dv = roundTo125(parseWeight(document.getElementById('input-dips')?.value) || 0);
 
       const data = getDefaultData();
       data.profile.onboardingComplete = true;
       data.profile.name = nameVal || 'Athlete';
       data.profile.setupDate = new Date().toISOString();
-      data.profile.hypDipWeight = hypDipWeight;
 
       if (bw > 0) {
         data.profile.bodyweight = bw;
@@ -2380,9 +2372,11 @@
     }
 
     function buildPrescriptionCards(sessionType, data) {
-      const pW = data.exercises.pullups.currentWeight || 0;
-      const dW = data.exercises.dips.currentWeight || 0;
-      const hypW = data.profile.hypDipWeight || 30;
+      const pW = roundTo125(data.exercises.pullups.currentWeight || 0);
+      const dW = roundTo125(data.exercises.dips.currentWeight || 0);
+      const hypW = getHypDipWeight(data);
+      const emomRpm = data.profile.emomRepsPerMin || 3;
+      const emomDur = data.profile.emomDurationMins || 30;
 
       if (sessionType === 'skill_a') {
         return `
@@ -2428,15 +2422,15 @@
         return `
       <div class="presc-card">
         <div class="presc-ex-name">1. Pull-ups EMOM</div>
-        <div class="presc-weight">3<span>reps/min</span></div>
-        <div class="presc-sets">30 minutes = 90 total reps</div>
+        <div class="presc-weight">${emomRpm}<span>reps/min</span></div>
+        <div class="presc-sets">${emomDur} minutes = ${emomRpm * emomDur} total reps</div>
         <div class="presc-rir">Every minute on the minute timer</div>
       </div>
       <div class="presc-card">
         <div class="presc-ex-name">2. Weighted Dips</div>
         <div class="presc-weight">${fmtWeight(hypW)}<span>kg</span></div>
-        <div class="presc-sets">10 sets × 6 reps</div>
-        <div class="presc-rir">Hypertrophy fixed weight</div>
+        <div class="presc-sets">10 sets × 5 reps</div>
+        <div class="presc-rir">50% of Skill A dip weight</div>
       </div>`;
       } else if (sessionType === 'hypertrophy_b') {
         return `
@@ -2450,7 +2444,7 @@
         <div class="presc-ex-name">2. Weighted Dips</div>
         <div class="presc-weight">${fmtWeight(hypW)}<span>kg</span></div>
         <div class="presc-sets">10 sets × 2 reps</div>
-        <div class="presc-rir">Hypertrophy fixed weight</div>
+        <div class="presc-rir">50% of Skill A dip weight</div>
       </div>`;
       }
       return '';
@@ -2501,7 +2495,7 @@
       } else if (sessionType === 'hypertrophy_a') {
         SS.movements = [
           { id: 'emom_pullups', name: 'Pull-ups EMOM', isEmom: true },
-          { id: 'hyp_dips', name: 'Weighted Dips', totalSets: 10, targetReps: 6, isHypDips: true }
+          { id: 'hyp_dips', name: 'Weighted Dips', totalSets: 10, targetReps: 5, isHypDips: true }
         ];
       } else if (sessionType === 'hypertrophy_b') {
         SS.movements = [
@@ -2544,7 +2538,7 @@
       let weight = 0;
       if (mov.id === 'pullups') weight = data.exercises.pullups.currentWeight || 0;
       else if (mov.id === 'dips') weight = data.exercises.dips.currentWeight || 0;
-      else if (mov.isHypDips) weight = data.profile.hypDipWeight || 30;
+      else if (mov.isHypDips) weight = getHypDipWeight(data);
 
       let prevSets = SS.loggedSets[mov.id] || [];
       let prevSetsHTML = prevSets.map((s, idx) => `
@@ -2737,21 +2731,21 @@
       const minRir = Math.min(...sets.map(s => s.rir !== undefined ? s.rir : 0));
       if (minRir >= 3) return 2.5;
       if (minRir === 2) return 1.25;
-      if (minRir === 1) return 0.5;
+      if (minRir === 1) return 1.25;
       return 0;
     }
 
     function applySkillAProgression(data, exId, loggedSets, actualWeight) {
       if (!data.exercises[exId]) return;
       const inc = calcSkillAIncrement(loggedSets);
-      data.exercises[exId].currentWeight = roundToHalf(actualWeight + inc);
+      data.exercises[exId].currentWeight = roundTo125(actualWeight + inc);
 
       let maxEst = 0;
       loggedSets.forEach(s => {
         const est = actualWeight > 0 ? actualWeight * (1 + (s.reps || 6) / 30) : 0;
         if (est > maxEst) maxEst = est;
       });
-      data.exercises[exId].oneRM = Math.max(data.exercises[exId].oneRM || 0, roundToHalf(maxEst));
+      data.exercises[exId].oneRM = Math.max(data.exercises[exId].oneRM || 0, roundTo125(maxEst));
     }
 
     function finishSession() {
@@ -2945,9 +2939,9 @@
       const container = document.getElementById('settings-content');
       if (!data) return;
 
-      const pW = data.exercises.pullups.currentWeight || 0;
-      const dW = data.exercises.dips.currentWeight || 0;
-      const hypW = data.profile.hypDipWeight || 30;
+      const pW = roundTo125(data.exercises.pullups.currentWeight || 0);
+      const dW = roundTo125(data.exercises.dips.currentWeight || 0);
+      const hypW = getHypDipWeight(data);
       const bw = data.profile.bodyweight;
 
       container.innerHTML = `
@@ -2986,12 +2980,9 @@
           </div>
           <button class="btn btn-ghost" id="btn-edit-dips" style="width:auto;height:32px;padding:0 12px;font-size:12px;">Adjust</button>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;">
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--text);">Hypertrophy Dips</div>
-            <div style="font-size:12px;color:var(--muted);">${fmtWeight(hypW)}kg</div>
-          </div>
-          <button class="btn btn-ghost" id="btn-edit-hypdips" style="width:auto;height:32px;padding:0 12px;font-size:12px;">Adjust</button>
+        <div style="padding:8px 0;">
+          <div style="font-size:14px;font-weight:700;color:var(--text);">Hypertrophy Dips</div>
+          <div style="font-size:12px;color:var(--muted);">${fmtWeight(hypW)}kg &nbsp;<span style="color:#555;">· auto (50% of Skill A dips)</span></div>
         </div>
       </div>
 
@@ -3059,11 +3050,6 @@
       document.getElementById('btn-edit-bw')?.addEventListener('click', () => openBodyweightModal());
       document.getElementById('btn-edit-pullups')?.addEventListener('click', () => openWeightModal('pullups'));
       document.getElementById('btn-edit-dips')?.addEventListener('click', () => openWeightModal('dips'));
-      document.getElementById('btn-edit-hypdips')?.addEventListener('click', () => {
-        document.getElementById('mhd-current').textContent = `${data.profile.hypDipWeight || 30}kg`;
-        document.getElementById('mhd-input').value = data.profile.hypDipWeight || 30;
-        showModal('modal-hypdips-adjust');
-      });
       document.getElementById('btn-export-json')?.addEventListener('click', doExport);
       document.getElementById('btn-import-json')?.addEventListener('click', () => {
         document.getElementById('import-file-input').click();
@@ -3112,7 +3098,7 @@
       document.getElementById('mwa-save').onclick = () => {
         const nw = parseWeight(document.getElementById('mwa-input').value);
         if (!isNaN(nw) && nw >= 0) {
-          data.exercises[exId].currentWeight = roundToHalf(nw);
+          data.exercises[exId].currentWeight = roundTo125(nw);
           saveData(data);
           hideModal('modal-weight-adjust');
           renderSettingsScreen();
@@ -3183,18 +3169,6 @@
       }
     });
 
-    document.getElementById('mhd-cancel')?.addEventListener('click', () => hideModal('modal-hypdips-adjust'));
-    document.getElementById('mhd-save')?.addEventListener('click', () => {
-      const nw = parseWeight(document.getElementById('mhd-input').value);
-      if (!isNaN(nw) && nw >= 0) {
-        const data = loadData();
-        data.profile.hypDipWeight = roundToHalf(nw);
-        saveData(data);
-        hideModal('modal-hypdips-adjust');
-        renderSettingsScreen();
-      }
-    });
-
     document.getElementById('mwa-cancel')?.addEventListener('click', () => hideModal('modal-weight-adjust'));
     document.getElementById('mbw-cancel')?.addEventListener('click', () => hideModal('modal-bodyweight-adjust'));
     document.getElementById('modal-abandon-cancel')?.addEventListener('click', () => hideModal('modal-abandon'));
@@ -3252,9 +3226,9 @@
       const incRir2 = calcSkillAIncrement([{ reps: 6, rir: 2 }, { reps: 6, rir: 3 }, { reps: 6, rir: 2 }]);
       check('Skill A increment: RIR 2 → +1.25kg', incRir2, 1.25);
 
-      // Test 3: Skill A increment RIR 1 -> +0.5kg
+      // Test 3: Skill A increment RIR 1 -> +1.25kg
       const incRir1 = calcSkillAIncrement([{ reps: 6, rir: 1 }, { reps: 6, rir: 2 }, { reps: 6, rir: 1 }]);
-      check('Skill A increment: RIR 1 → +0.5kg', incRir1, 0.5);
+      check('Skill A increment: RIR 1 → +1.25kg', incRir1, 1.25);
 
       // Test 4: Skill A increment RIR 0 -> hold (0kg)
       const incRir0 = calcSkillAIncrement([{ reps: 6, rir: 0 }, { reps: 6, rir: 1 }, { reps: 6, rir: 2 }]);
@@ -3309,7 +3283,6 @@
       document.getElementById('input-name')?.addEventListener('input', updateWeightDisplays);
       document.getElementById('input-pullups')?.addEventListener('input', updateWeightDisplays);
       document.getElementById('input-dips')?.addEventListener('input', updateWeightDisplays);
-      document.getElementById('input-hyp-dips')?.addEventListener('input', updateWeightDisplays);
       document.getElementById('input-bodyweight')?.addEventListener('input', updateWeightDisplays);
       document.getElementById('btn-confirm-weights')?.addEventListener('click', completeOnboarding);
 
