@@ -1,12 +1,12 @@
-const CACHE = 'odin-v1.0.2'; // Must match APP_VERSION in index.html — bump on every deployment
+const CACHE = 'odin-v1.0.6'; // Must match APP_VERSION in index.html — bump on every deployment
 
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE).then(c => c.addAll([
       './',
       './index.html',
-      './assets/manifest.json',
-      './assets/rogue_logo.png'
+      './manifest.json',
+      './odin_logo.png'
     ]))
   );
   self.skipWaiting();

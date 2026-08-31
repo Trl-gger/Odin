@@ -32,7 +32,7 @@ The repo contains four files that matter:
 | `index.html` | All app logic — HTML, CSS, and JS in one file |
 | `sw.js` | Service worker for offline support |
 | `manifest.json` | PWA manifest (name, icons, theme colour) |
-| `rogue_logo.png` | App icon |
+| `odin_logo.png` | App icon |
 
 Do not create additional JS or CSS files. All app logic stays in `index.html`. If you need to change the app name, accent colour, or icon, `manifest.json` is the right place — not `index.html`.
 
