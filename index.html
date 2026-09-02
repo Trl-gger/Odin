@@ -2059,8 +2059,8 @@
     // ODIN ENGINE IMPLEMENTATION
     // ═══════════════════════════════════════════════════════════════
 
-    const APP_VERSION = '1.0.7';
-    const BUILD_TIMESTAMP = '2026-09-02 14:00';
+    const APP_VERSION = '1.0.8';
+    const BUILD_TIMESTAMP = '2026-09-02 14:05';
 
     function roundToHalf(value) { return Math.round((value || 0) * 2) / 2; }
     function roundTo125(value) { return Math.round((value || 0) / 1.25) * 1.25; }
@@ -2711,6 +2711,7 @@
       const todayStr = new Date().toISOString().split('T')[0];
       const puWeightUsed = data.exercises.pullups.currentWeight || 0;
       const dipWeightUsed = data.exercises.dips.currentWeight || 0;
+      const hypDipWeightUsed = getHypDipWeight(data);
 
       const sessRecord = {
         date: todayStr,
@@ -2719,12 +2720,37 @@
         loggedSets: SS.loggedSets
       };
 
+      const puSets = SS.loggedSets['pullups'] || [];
+      const dipSets = SS.loggedSets['dips'] || [];
+      const highSets = SS.loggedSets['high_pullups'] || [];
+      const emomSets = SS.loggedSets['emom_pullups'] || [];
+      const pyramidSets = SS.loggedSets['pyramid_pullups'] || [];
+      const hypDipSets = SS.loggedSets['hyp_dips'] || [];
+
       if (SS.sessionType === 'skill_a') {
-        const puSets = SS.loggedSets['pullups'] || [];
-        const dipSets = SS.loggedSets['dips'] || [];
-        sessRecord.skillA = {
+        sessRecord.detail = {
           pullups: { weightUsed: puWeightUsed, sets: puSets.map(s => s.reps), progressed: puSets.length >= 3 && puSets.every(s => s.reps >= 6) },
-          dips: { weightUsed: dipWeightUsed, sets: dipSets.map(s => s.reps), progressed: dipSets.length >= 3 && dipSets.every(s => s.reps >= 6) }
+          dips: { weightUsed: dipWeightUsed, sets: dipSets.map(s => s.reps), progressed: dipSets.length >= 3 && dipSets.every(s => s.reps >= 6) },
+          highPullups: { sets: highSets.map(s => s.reps) }
+        };
+        sessRecord.skillA = sessRecord.detail; // Backwards-compatibility
+      } else if (SS.sessionType === 'skill_b') {
+        sessRecord.detail = {
+          pullups: { weightUsed: puWeightUsed, sets: puSets.map(s => s.reps) },
+          dips: { weightUsed: dipWeightUsed, sets: dipSets.map(s => s.reps) },
+          highPullups: { sets: highSets.map(s => s.reps) }
+        };
+      } else if (SS.sessionType === 'hypertrophy_a') {
+        const totalEmomReps = emomSets.reduce((sum, s) => sum + (s.reps || 0), 0);
+        sessRecord.detail = {
+          emomPullups: { totalReps: totalEmomReps, durationMins: Math.max(1, SS.emomMinute - 1), repsPerMin: data.profile.emomRepsPerMin || 3 },
+          hypDips: { weightUsed: hypDipWeightUsed, roundsCompleted: hypDipSets.length, totalRounds: 10, sets: hypDipSets.map(s => s.reps) }
+        };
+      } else if (SS.sessionType === 'hypertrophy_b') {
+        const totalPyramidReps = pyramidSets.reduce((sum, s) => sum + (s.reps || 0), 0);
+        sessRecord.detail = {
+          pyramidPullups: { totalReps: totalPyramidReps, stepsCompleted: pyramidSets.length, totalSteps: 18 },
+          hypDips: { weightUsed: hypDipWeightUsed, sets: hypDipSets.map(s => s.reps) }
         };
       }
 
@@ -2800,6 +2826,14 @@
     // HISTORY SCREEN
     // ═══════════════════════════════════════════════════════════════
 
+    function fmtHistoryDate(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr + 'T12:00:00');
+      const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+    }
+
     function renderHistoryScreen() {
       const data = loadData();
       const container = document.getElementById('history-content');
@@ -2826,44 +2860,153 @@
       }
 
       const typeLabels = {
-        skill_a: 'SKILL A', skill_b: 'SKILL B',
-        hypertrophy_a: 'HYPERTROPHY A', hypertrophy_b: 'HYPERTROPHY B'
+        skill_a: 'SKILL A',
+        skill_b: 'SKILL B',
+        hypertrophy_a: 'HYPERTROPHY A',
+        hypertrophy_b: 'HYPERTROPHY B'
       };
 
-      container.innerHTML = list.map(s => {
-        let detailHTML = '';
-        if (s.type === 'skill_a' && s.skillA) {
-          const pu = s.skillA.pullups;
-          const d = s.skillA.dips;
-          const puSets = (pu.sets || []).join(' / ') || '—';
-          const dipSets = (d.sets || []).join(' / ') || '—';
-          detailHTML = `
-        <div style="margin-top:8px;display:flex;flex-direction:column;gap:5px;">
-          <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
-            <span style="color:var(--muted);width:64px;">Pull-ups</span>
-            <span style="color:var(--text);font-weight:700;width:44px;">${pu.weightUsed}kg</span>
-            <span style="color:var(--text);flex:1;">${puSets}</span>
-            ${pu.progressed ? '<span style="color:var(--success);font-weight:700;">+2.5kg</span>' : ''}
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
-            <span style="color:var(--muted);width:64px;">Dips</span>
-            <span style="color:var(--text);font-weight:700;width:44px;">${d.weightUsed}kg</span>
-            <span style="color:var(--text);flex:1;">${dipSets}</span>
-            ${d.progressed ? '<span style="color:var(--success);font-weight:700;">+2.5kg</span>' : ''}
-          </div>
-        </div>`;
+      const badgeClsMap = {
+        skill_a: 'heavy',
+        skill_b: 'assistance',
+        hypertrophy_a: 'heavy',
+        hypertrophy_b: 'assistance'
+      };
+
+      container.innerHTML = '';
+      list.forEach(s => {
+        const dateStr = fmtHistoryDate(s.date);
+        const badgeText = typeLabels[s.type] || s.type.toUpperCase();
+        const badgeCls = badgeClsMap[s.type] || 'heavy';
+
+        const detail = s.detail || s.skillA;
+
+        let exSummary = '';
+        let bodyHTML = '';
+
+        if (s.type === 'skill_a') {
+          const pu = detail?.pullups || { weightUsed: 0, sets: [] };
+          const d = detail?.dips || { weightUsed: 0, sets: [] };
+          const hp = detail?.highPullups || { sets: [] };
+          exSummary = `Pull-ups ${pu.weightUsed > 0 ? pu.weightUsed + 'kg' : 'BW'} • Dips ${d.weightUsed > 0 ? d.weightUsed + 'kg' : 'BW'} • High Pull-ups`;
+
+          const puSetsText = (pu.sets || []).map((r, i) => `<div class="history-set-row">Set ${i + 1}: ${r} reps</div>`).join('') || '<div class="history-set-row">No sets logged</div>';
+          const dipSetsText = (d.sets || []).map((r, i) => `<div class="history-set-row">Set ${i + 1}: ${r} reps</div>`).join('') || '<div class="history-set-row">No sets logged</div>';
+          const hpSetsText = (hp.sets || []).map((r, i) => `<div class="history-set-row">Set ${i + 1}: ${r} rep</div>`).join('') || '<div class="history-set-row">4 sets × 1 rep (BW)</div>';
+
+          const puBadge = pu.progressed ? `<span class="inc-chip up" style="font-size:10px;padding:2px 6px;margin-left:6px;">+2.5kg</span>` : '';
+          const dipBadge = d.progressed ? `<span class="inc-chip up" style="font-size:10px;padding:2px 6px;margin-left:6px;">+2.5kg</span>` : '';
+
+          bodyHTML = `
+            <div class="history-ex-section">
+              <div class="history-ex-name">1. Weighted Pull-ups ${puBadge}</div>
+              <div class="history-ex-weight">${pu.weightUsed > 0 ? pu.weightUsed + 'kg' : 'BW'}</div>
+              ${puSetsText}
+            </div>
+            <div class="history-ex-section">
+              <div class="history-ex-name">2. Weighted Dips ${dipBadge}</div>
+              <div class="history-ex-weight">${d.weightUsed > 0 ? d.weightUsed + 'kg' : 'BW'}</div>
+              ${dipSetsText}
+            </div>
+            <div class="history-ex-section">
+              <div class="history-ex-name">3. High Pull-ups</div>
+              <div class="history-ex-weight">BW</div>
+              ${hpSetsText}
+            </div>`;
+        } else if (s.type === 'skill_b') {
+          const pu = detail?.pullups || { weightUsed: 0, sets: [] };
+          const d = detail?.dips || { weightUsed: 0, sets: [] };
+          const hp = detail?.highPullups || { sets: [] };
+          exSummary = `Pull-ups ${pu.weightUsed > 0 ? pu.weightUsed + 'kg' : 'BW'} • Dips ${d.weightUsed > 0 ? d.weightUsed + 'kg' : 'BW'} • High Pull-ups`;
+
+          const puSetsText = (pu.sets || []).map((r, i) => `<div class="history-set-row">Set ${i + 1}: ${r} reps</div>`).join('') || '<div class="history-set-row">6 sets × 3 reps</div>';
+          const dipSetsText = (d.sets || []).map((r, i) => `<div class="history-set-row">Set ${i + 1}: ${r} reps</div>`).join('') || '<div class="history-set-row">6 sets × 3 reps</div>';
+          const hpSetsText = (hp.sets || []).map((r, i) => `<div class="history-set-row">Set ${i + 1}: ${r} rep</div>`).join('') || '<div class="history-set-row">4 sets × 1 rep (BW)</div>';
+
+          bodyHTML = `
+            <div class="history-ex-section">
+              <div class="history-ex-name">1. Weighted Pull-ups</div>
+              <div class="history-ex-weight">${pu.weightUsed > 0 ? pu.weightUsed + 'kg' : 'BW'}</div>
+              ${puSetsText}
+            </div>
+            <div class="history-ex-section">
+              <div class="history-ex-name">2. Weighted Dips</div>
+              <div class="history-ex-weight">${d.weightUsed > 0 ? d.weightUsed + 'kg' : 'BW'}</div>
+              ${dipSetsText}
+            </div>
+            <div class="history-ex-section">
+              <div class="history-ex-name">3. High Pull-ups</div>
+              <div class="history-ex-weight">BW</div>
+              ${hpSetsText}
+            </div>`;
+        } else if (s.type === 'hypertrophy_a') {
+          const emom = detail?.emomPullups || { totalReps: 0, durationMins: 30, repsPerMin: 3 };
+          const hd = detail?.hypDips || { weightUsed: 0, roundsCompleted: 0, totalRounds: 10, sets: [] };
+          exSummary = `EMOM ${emom.totalReps || 0} reps • Dips ${hd.weightUsed > 0 ? hd.weightUsed + 'kg' : 'BW'}`;
+
+          const hdSetsText = (hd.sets || []).map((r, i) => `<div class="history-set-row">Set ${i + 1}: ${r} reps</div>`).join('') || `<div class="history-set-row">${hd.roundsCompleted || 0} of ${hd.totalRounds || 10} cluster sets</div>`;
+
+          bodyHTML = `
+            <div class="history-ex-section">
+              <div class="history-ex-name">1. Pull-ups EMOM</div>
+              <div class="history-ex-weight">${emom.repsPerMin || 3} reps/min</div>
+              <div class="history-set-row">${emom.totalReps || 0} total reps completed (${emom.durationMins || 30} mins)</div>
+            </div>
+            <div class="history-ex-section">
+              <div class="history-ex-name">2. Hypertrophy Dips</div>
+              <div class="history-ex-weight">${hd.weightUsed > 0 ? hd.weightUsed + 'kg' : 'BW'}</div>
+              ${hdSetsText}
+            </div>`;
+        } else if (s.type === 'hypertrophy_b') {
+          const pyr = detail?.pyramidPullups || { totalReps: 0, stepsCompleted: 0, totalSteps: 18 };
+          const hd = detail?.hypDips || { weightUsed: 0, sets: [] };
+          exSummary = `Pyramid ${pyr.totalReps || 0} reps • Dips ${hd.weightUsed > 0 ? hd.weightUsed + 'kg' : 'BW'}`;
+
+          const hdSetsText = (hd.sets || []).map((r, i) => `<div class="history-set-row">Set ${i + 1}: ${r} reps</div>`).join('') || `<div class="history-set-row">10 sets × 2 reps</div>`;
+
+          bodyHTML = `
+            <div class="history-ex-section">
+              <div class="history-ex-name">1. Pull-ups Pyramid</div>
+              <div class="history-ex-weight">50 target reps</div>
+              <div class="history-set-row">${pyr.totalReps || 0} total reps completed (${pyr.stepsCompleted || 0} of 18 steps)</div>
+            </div>
+            <div class="history-ex-section">
+              <div class="history-ex-name">2. Hypertrophy Dips</div>
+              <div class="history-ex-weight">${hd.weightUsed > 0 ? hd.weightUsed + 'kg' : 'BW'}</div>
+              ${hdSetsText}
+            </div>`;
         } else {
-          detailHTML = `<div style="font-size:13px;color:var(--text);font-weight:600;margin-top:4px;">Completed workout</div>`;
+          exSummary = `Completed workout`;
+          bodyHTML = `<div class="history-set-row">Completed workout session</div>`;
         }
-        return `
-      <div class="card" style="margin-bottom:12px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-          <span class="day-badge heavy">${typeLabels[s.type] || s.type}</span>
-          <span style="font-size:12px;color:var(--muted);">${s.date}</span>
-        </div>
-        ${detailHTML}
-      </div>`;
-      }).join('');
+
+        const card = document.createElement('div');
+        card.className = 'history-card';
+        card.style.marginBottom = '8px';
+
+        card.innerHTML = `
+          <div class="history-card-head">
+            <div style="flex-shrink:0;">
+              <div class="history-card-date">${dateStr}</div>
+              <div style="margin-top:4px;"><span class="session-type-badge ${badgeCls}">${badgeText}</span></div>
+            </div>
+            <div class="history-card-meta">
+              <div class="history-card-exs">${exSummary}</div>
+            </div>
+            <svg class="history-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M6 4l4 4-4 4" stroke="#444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="history-card-body">
+            ${bodyHTML}
+          </div>`;
+
+        card.querySelector('.history-card-head').addEventListener('click', () => {
+          card.classList.toggle('open');
+        });
+
+        container.appendChild(card);
+      });
     }
 
     // ═══════════════════════════════════════════════════════════════
