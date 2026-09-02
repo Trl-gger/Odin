@@ -1,4 +1,4 @@
-const CACHE = 'odin-v1.0.6'; // Must match APP_VERSION in index.html — bump on every deployment
+const CACHE = 'odin-v1.0.7'; // Must match APP_VERSION in index.html — bump on every deployment
 
 self.addEventListener('install', e => {
   e.waitUntil(

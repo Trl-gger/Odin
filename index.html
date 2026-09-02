@@ -707,7 +707,7 @@
     /* ── Set Input ── */
     .set-input-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr;
       gap: 12px;
       margin-bottom: 14px;
     }
@@ -2059,7 +2059,7 @@
     // ODIN ENGINE IMPLEMENTATION
     // ═══════════════════════════════════════════════════════════════
 
-    const APP_VERSION = '1.0.6';
+    const APP_VERSION = '1.0.7';
     const BUILD_TIMESTAMP = '2026-08-31 11:44';
 
     function roundToHalf(value) { return Math.round((value || 0) * 2) / 2; }
@@ -2371,13 +2371,13 @@
         <div class="presc-ex-name">1. Weighted Pull-ups</div>
         <div class="presc-weight">${fmtWeight(pW)}<span>kg</span></div>
         <div class="presc-sets">3 sets × 6 reps</div>
-        <div class="presc-rir">Log RIR per set (Progression engine)</div>
+        <div class="presc-rir">3 sets × 6 reps — hit all 3 to progress</div>
       </div>
       <div class="presc-card">
         <div class="presc-ex-name">2. Weighted Dips</div>
         <div class="presc-weight">${fmtWeight(dW)}<span>kg</span></div>
         <div class="presc-sets">3 sets × 6 reps</div>
-        <div class="presc-rir">Log RIR per set (Progression engine)</div>
+        <div class="presc-rir">3 sets × 6 reps — hit all 3 to progress</div>
       </div>
       <div class="presc-card">
         <div class="presc-ex-name">3. High Pull-ups</div>
@@ -2475,8 +2475,8 @@
 
       if (sessionType === 'skill_a' || sessionType === 'skill_b') {
         SS.movements = [
-          { id: 'pullups', name: 'Weighted Pull-ups', totalSets: sessionType === 'skill_a' ? 3 : 6, targetReps: sessionType === 'skill_a' ? 6 : 3, hasRir: sessionType === 'skill_a' },
-          { id: 'dips', name: 'Weighted Dips', totalSets: sessionType === 'skill_a' ? 3 : 6, targetReps: sessionType === 'skill_a' ? 6 : 3, hasRir: sessionType === 'skill_a' },
+          { id: 'pullups', name: 'Weighted Pull-ups', totalSets: sessionType === 'skill_a' ? 3 : 6, targetReps: sessionType === 'skill_a' ? 6 : 3 },
+          { id: 'dips', name: 'Weighted Dips', totalSets: sessionType === 'skill_a' ? 3 : 6, targetReps: sessionType === 'skill_a' ? 6 : 3 },
           { id: 'high_pullups', name: 'High Pull-ups', totalSets: 4, targetReps: 1, isHighPullups: true }
         ];
       } else if (sessionType === 'hypertrophy_a') {
@@ -2532,7 +2532,7 @@
       <div class="prev-set-row">
         <span class="set-check">✓</span>
         <span style="font-weight:700;">Set ${idx + 1}:</span>
-        <span>${s.reps} reps ${s.weight > 0 ? `@ +${s.weight}kg` : '@ BW'} ${s.rir !== undefined ? `(RIR ${s.rir})` : ''}</span>
+        <span>${s.reps} reps ${s.weight > 0 ? `@ +${s.weight}kg` : '@ BW'}</span>
       </div>`).join('');
 
       if (mov.isEmom) {
@@ -2630,18 +2630,7 @@
         return;
       }
 
-      let rirInputHTML = '';
-      if (mov.hasRir) {
-        rirInputHTML = `
-      <div class="set-field-wrap">
-        <div class="set-field-label">RIR (Reps in Reserve)</div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <button class="stepper-btn" id="btn-rir-minus">-</button>
-          <input class="set-number-input" id="input-set-rir" type="number" inputmode="numeric" min="0" max="10" step="1" value="0" style="flex:1;" />
-          <button class="stepper-btn" id="btn-rir-plus">+</button>
-        </div>
-      </div>`;
-      }
+      const rirInputHTML = '';
 
       container.innerHTML = `
     <div style="text-align:center;margin-bottom:14px;">
@@ -2674,21 +2663,11 @@
         const inp = document.getElementById('input-set-reps');
         if (inp) inp.value = (parseInt(inp.value) || 0) + 1;
       });
-      document.getElementById('btn-rir-minus')?.addEventListener('click', () => {
-        const inp = document.getElementById('input-set-rir');
-        if (inp) inp.value = Math.max(0, (parseInt(inp.value) || 0) - 1);
-      });
-      document.getElementById('btn-rir-plus')?.addEventListener('click', () => {
-        const inp = document.getElementById('input-set-rir');
-        if (inp) inp.value = Math.min(10, (parseInt(inp.value) || 0) + 1);
-      });
-
       document.getElementById('btn-log-set')?.addEventListener('click', () => {
         const reps = parseInt(document.getElementById('input-set-reps')?.value) || mov.targetReps;
-        const rir = mov.hasRir ? (parseInt(document.getElementById('input-set-rir')?.value) || 0) : undefined;
 
         if (!SS.loggedSets[mov.id]) SS.loggedSets[mov.id] = [];
-        SS.loggedSets[mov.id].push({ reps, rir, weight });
+        SS.loggedSets[mov.id].push({ reps, weight });
 
         if (SS.currentSetNum >= mov.totalSets) {
           nextMovement();
@@ -2712,27 +2691,16 @@
     }
 
     function calcSkillAIncrement(sets) {
-      if (!sets || sets.length === 0) return 0;
-      const allCompleted = sets.length >= 3 && sets.every(s => s.reps >= 6);
-      if (!allCompleted) return 0;
-      const minRir = Math.min(...sets.map(s => s.rir !== undefined ? s.rir : 0));
-      if (minRir >= 3) return 2.5;
-      if (minRir === 2) return 1.25;
-      if (minRir === 1) return 1.25;
-      return 0;
+      if (!sets || sets.length < 3) return 0;
+      return sets.every(s => s.reps >= 6) ? 2.5 : 0;
     }
 
     function applySkillAProgression(data, exId, loggedSets, actualWeight) {
       if (!data.exercises[exId]) return;
       const inc = calcSkillAIncrement(loggedSets);
-      data.exercises[exId].currentWeight = roundTo125(actualWeight + inc);
-
-      let maxEst = 0;
-      loggedSets.forEach(s => {
-        const est = actualWeight > 0 ? actualWeight * (1 + (s.reps || 6) / 30) : 0;
-        if (est > maxEst) maxEst = est;
-      });
-      data.exercises[exId].oneRM = Math.max(data.exercises[exId].oneRM || 0, roundTo125(maxEst));
+      const newWeight = roundTo125(actualWeight + inc);
+      data.exercises[exId].currentWeight = newWeight;
+      data.exercises[exId].oneRM = Math.max(data.exercises[exId].oneRM || 0, newWeight);
     }
 
     function finishSession() {
@@ -2741,12 +2709,24 @@
       if (!data) return;
 
       const todayStr = new Date().toISOString().split('T')[0];
+      const puWeightUsed = data.exercises.pullups.currentWeight || 0;
+      const dipWeightUsed = data.exercises.dips.currentWeight || 0;
+
       const sessRecord = {
         date: todayStr,
         type: SS.sessionType,
         wasUnscheduled: SS.wasUnscheduled,
         loggedSets: SS.loggedSets
       };
+
+      if (SS.sessionType === 'skill_a') {
+        const puSets = SS.loggedSets['pullups'] || [];
+        const dipSets = SS.loggedSets['dips'] || [];
+        sessRecord.skillA = {
+          pullups: { weightUsed: puWeightUsed, sets: puSets.map(s => s.reps), progressed: puSets.length >= 3 && puSets.every(s => s.reps >= 6) },
+          dips: { weightUsed: dipWeightUsed, sets: dipSets.map(s => s.reps), progressed: dipSets.length >= 3 && dipSets.every(s => s.reps >= 6) }
+        };
+      }
 
       if (SS.loggedSets['pullups'] || SS.loggedSets['emom_pullups'] || SS.loggedSets['pyramid_pullups']) {
         if (!data.exercises.pullups.sessions) data.exercises.pullups.sessions = [];
@@ -2851,13 +2831,37 @@
       };
 
       container.innerHTML = list.map(s => {
+        let detailHTML = '';
+        if (s.type === 'skill_a' && s.skillA) {
+          const pu = s.skillA.pullups;
+          const d = s.skillA.dips;
+          const puSets = (pu.sets || []).join(' / ') || '—';
+          const dipSets = (d.sets || []).join(' / ') || '—';
+          detailHTML = `
+        <div style="margin-top:8px;display:flex;flex-direction:column;gap:5px;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
+            <span style="color:var(--muted);width:64px;">Pull-ups</span>
+            <span style="color:var(--text);font-weight:700;width:44px;">${pu.weightUsed}kg</span>
+            <span style="color:var(--text);flex:1;">${puSets}</span>
+            ${pu.progressed ? '<span style="color:var(--success);font-weight:700;">+2.5kg</span>' : ''}
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
+            <span style="color:var(--muted);width:64px;">Dips</span>
+            <span style="color:var(--text);font-weight:700;width:44px;">${d.weightUsed}kg</span>
+            <span style="color:var(--text);flex:1;">${dipSets}</span>
+            ${d.progressed ? '<span style="color:var(--success);font-weight:700;">+2.5kg</span>' : ''}
+          </div>
+        </div>`;
+        } else {
+          detailHTML = `<div style="font-size:13px;color:var(--text);font-weight:600;margin-top:4px;">Completed workout</div>`;
+        }
         return `
       <div class="card" style="margin-bottom:12px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
           <span class="day-badge heavy">${typeLabels[s.type] || s.type}</span>
           <span style="font-size:12px;color:var(--muted);">${s.date}</span>
         </div>
-        <div style="font-size:13px;color:var(--text);font-weight:600;">Completed workout</div>
+        ${detailHTML}
       </div>`;
       }).join('');
     }
@@ -3205,43 +3209,46 @@
         }
       }
 
-      // Test 1: Skill A increment RIR 3+ -> +2.5kg
-      const incRir3 = calcSkillAIncrement([{ reps: 6, rir: 3 }, { reps: 6, rir: 4 }, { reps: 6, rir: 3 }]);
-      check('Skill A increment: RIR 3+ → +2.5kg', incRir3, 2.5);
+      // SA1: Pull-ups 6/6/6 → +2.5kg
+      check('SA1: Pull-ups 6/6/6 → +2.5kg', calcSkillAIncrement([{ reps: 6 }, { reps: 6 }, { reps: 6 }]), 2.5);
 
-      // Test 2: Skill A increment RIR 2 -> +1.25kg
-      const incRir2 = calcSkillAIncrement([{ reps: 6, rir: 2 }, { reps: 6, rir: 3 }, { reps: 6, rir: 2 }]);
-      check('Skill A increment: RIR 2 → +1.25kg', incRir2, 1.25);
+      // SA2: Pull-ups 5/6/6 → hold
+      check('SA2: Pull-ups 5/6/6 → hold', calcSkillAIncrement([{ reps: 5 }, { reps: 6 }, { reps: 6 }]), 0);
 
-      // Test 3: Skill A increment RIR 1 -> +1.25kg
-      const incRir1 = calcSkillAIncrement([{ reps: 6, rir: 1 }, { reps: 6, rir: 2 }, { reps: 6, rir: 1 }]);
-      check('Skill A increment: RIR 1 → +1.25kg', incRir1, 1.25);
+      // SA3: Pull-ups 5/5/5 → hold
+      check('SA3: Pull-ups 5/5/5 → hold', calcSkillAIncrement([{ reps: 5 }, { reps: 5 }, { reps: 5 }]), 0);
 
-      // Test 4: Skill A increment RIR 0 -> hold (0kg)
-      const incRir0 = calcSkillAIncrement([{ reps: 6, rir: 0 }, { reps: 6, rir: 1 }, { reps: 6, rir: 2 }]);
-      check('Skill A increment: RIR 0 → hold (0kg)', incRir0, 0);
+      // SA4: Dips 6/6/6 → +2.5kg
+      check('SA4: Dips 6/6/6 → +2.5kg', calcSkillAIncrement([{ reps: 6 }, { reps: 6 }, { reps: 6 }]), 2.5);
 
-      // Test 5: Skill A increment failed reps -> hold (0kg)
-      const incFailed = calcSkillAIncrement([{ reps: 6, rir: 2 }, { reps: 5, rir: 0 }, { reps: 6, rir: 2 }]);
-      check('Skill A increment: failed reps → hold (0kg)', incFailed, 0);
+      // SA5: Dips 6/6/5 → hold
+      check('SA5: Dips 6/6/5 → hold', calcSkillAIncrement([{ reps: 6 }, { reps: 6 }, { reps: 5 }]), 0);
 
-      // Test 6: Pull-ups and dips progress independently
-      const testData = {
+      // SA6: Pull-ups complete (6/6/6), Dips incomplete (6/6/5) → independent
+      const sa6data = {
         exercises: {
-          pullups: { currentWeight: 20, oneRM: 20, sessions: [] },
-          dips: { currentWeight: 40, oneRM: 40, sessions: [] }
+          pullups: { currentWeight: 30, oneRM: 30, sessions: [] },
+          dips: { currentWeight: 60, oneRM: 60, sessions: [] }
         }
       };
-      applySkillAProgression(testData, 'pullups', [{ reps: 6, rir: 3 }, { reps: 6, rir: 3 }, { reps: 6, rir: 3 }], 20);
-      applySkillAProgression(testData, 'dips', [{ reps: 6, rir: 0 }, { reps: 6, rir: 0 }, { reps: 6, rir: 0 }], 40);
-      check('Pull-ups progressed independently', testData.exercises.pullups.currentWeight, 22.5);
-      check('Dips held independently', testData.exercises.dips.currentWeight, 40);
+      applySkillAProgression(sa6data, 'pullups', [{ reps: 6 }, { reps: 6 }, { reps: 6 }], 30);
+      applySkillAProgression(sa6data, 'dips', [{ reps: 6 }, { reps: 6 }, { reps: 5 }], 60);
+      check('SA6: Pull-ups progress (6/6/6)', sa6data.exercises.pullups.currentWeight, 32.5);
+      check('SA6: Dips hold (6/6/5)', sa6data.exercises.dips.currentWeight, 60);
 
-      // Test 7: Skill B weight mirrors Skill A
-      const skillBWeight = getSkillBWeight(testData, 'pullups');
-      check('Skill B weight mirrors Skill A', skillBWeight, 22.5);
+      // SA7: Dips complete (6/6/6), Pull-ups incomplete (5/6/6) → independent
+      const sa7data = {
+        exercises: {
+          pullups: { currentWeight: 30, oneRM: 30, sessions: [] },
+          dips: { currentWeight: 60, oneRM: 60, sessions: [] }
+        }
+      };
+      applySkillAProgression(sa7data, 'pullups', [{ reps: 5 }, { reps: 6 }, { reps: 6 }], 30);
+      applySkillAProgression(sa7data, 'dips', [{ reps: 6 }, { reps: 6 }, { reps: 6 }], 60);
+      check('SA7: Pull-ups hold (5/6/6)', sa7data.exercises.pullups.currentWeight, 30);
+      check('SA7: Dips progress (6/6/6)', sa7data.exercises.dips.currentWeight, 62.5);
 
-      // Test 8: Schedule: correct session type for each day of week
+      // SA8: Schedule correctness
       const expectedSchedule = {
         1: 'skill_a', 2: 'rest', 3: 'skill_b', 4: 'rest', 5: 'hypertrophy_a', 6: 'hypertrophy_b', 0: 'rest'
       };
@@ -3249,7 +3256,7 @@
       for (let day = 0; day <= 6; day++) {
         if (getScheduleForDay(day).type !== expectedSchedule[day]) schedOk = false;
       }
-      check('Schedule: correct session type for each day of week', schedOk, true);
+      check('SA8: Schedule correct for each day', schedOk, true);
 
       console.log(`ODIN TESTS COMPLETE: ${passed}/${total} passed`);
     })();
