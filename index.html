@@ -1878,13 +1878,14 @@
     <!-- ════ SCREEN 8 — PROGRESS ════ -->
     <div class="screen" id="s-progress">
       <div class="inner" style="padding-top:24px;">
-        <div class="screen-title" style="margin-bottom:6px;">PROGRESS</div>
-        <div class="screen-sub" style="margin-bottom:16px;">Weight &amp; bodyweight tracking</div>
-        <div style="display:flex;gap:8px;margin-bottom:16px;" id="progress-period-selector">
-          <button class="btn btn-ghost active" data-period="1M" style="flex:1;height:36px;font-size:12px;">1M</button>
-          <button class="btn btn-ghost" data-period="3M" style="flex:1;height:36px;font-size:12px;">3M</button>
-          <button class="btn btn-ghost" data-period="ALL" style="flex:1;height:36px;font-size:12px;">ALL</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div>
+            <div class="screen-title">PROGRESS</div>
+            <div class="screen-sub">Progression over time</div>
+          </div>
         </div>
+        <div class="ex-pill-scroll" id="progress-ex-pills"></div>
+        <div style="height:12px;"></div>
         <div id="progress-content"></div>
         <div class="scroll-pad"></div>
       </div>
@@ -2059,8 +2060,8 @@
     // ODIN ENGINE IMPLEMENTATION
     // ═══════════════════════════════════════════════════════════════
 
-    const APP_VERSION = '1.0.8';
-    const BUILD_TIMESTAMP = '2026-09-02 14:05';
+    const APP_VERSION = '1.0.9';
+    const BUILD_TIMESTAMP = '2026-09-03 22:30';
 
     function roundToHalf(value) { return Math.round((value || 0) * 2) / 2; }
     function roundTo125(value) { return Math.round((value || 0) / 1.25) * 1.25; }
@@ -3013,40 +3014,135 @@
     // PROGRESS SCREEN
     // ═══════════════════════════════════════════════════════════════
 
-    let progressPeriod = '1M';
+    let progressEx = 'pullups';
+    let progressPeriod = 'all';
+
+    const PROGRESS_EX_ORDER = [
+      { id: 'pullups', label: 'PULL-UPS' },
+      { id: 'dips', label: 'DIPS' }
+    ];
 
     function renderProgressScreen() {
-      const data = loadData();
-      const container = document.getElementById('progress-content');
-      if (!data) return;
+      const pills = document.getElementById('progress-ex-pills');
+      if (pills) {
+        pills.innerHTML = PROGRESS_EX_ORDER.map(({ id, label }) =>
+          `<button class="ex-pill${id === progressEx ? ' active' : ''}" data-ex="${id}">${label}</button>`
+        ).join('');
+        pills.querySelectorAll('.ex-pill').forEach(btn => {
+          btn.addEventListener('click', () => {
+            progressEx = btn.dataset.ex;
+            pills.querySelectorAll('.ex-pill').forEach(b => b.classList.toggle('active', b === btn));
+            renderProgressContent();
+          });
+        });
+      }
+      renderProgressContent();
+    }
 
-      document.querySelectorAll('#progress-period-selector button').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.period === progressPeriod);
-        btn.onclick = () => {
-          progressPeriod = btn.dataset.period;
-          renderProgressScreen();
-        };
+    function getPeriodCutStr(period) {
+      if (period === 'all') return null;
+      const days = period === '1m' ? 30 : 90;
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - days);
+      return cutoff.toISOString().split('T')[0];
+    }
+
+    function getProgressPoints(exId, period) {
+      const data = loadData();
+      if (!data || !data.exercises || !data.exercises[exId]) return [];
+      const ex = data.exercises[exId];
+      const rawSessions = ex.sessions || [];
+      const points = [];
+
+      rawSessions.forEach(s => {
+        let w = null;
+        if (s.detail && s.detail[exId] && s.detail[exId].weightUsed !== undefined) {
+          w = s.detail[exId].weightUsed;
+        } else if (s.skillA && s.skillA[exId] && s.skillA[exId].weightUsed !== undefined) {
+          w = s.skillA[exId].weightUsed;
+        } else if (s.actualWeight !== undefined) {
+          w = s.actualWeight;
+        } else if (s.weightUsed !== undefined) {
+          w = s.weightUsed;
+        } else if (s.loggedSets && s.loggedSets[exId] && s.loggedSets[exId][0] && s.loggedSets[exId][0].weight !== undefined) {
+          w = s.loggedSets[exId][0].weight;
+        }
+        if (w !== null && !isNaN(w) && s.date) {
+          points.push({ date: s.date, weight: w });
+        }
       });
 
-      const pW = data.exercises.pullups.currentWeight || 0;
-      const dW = data.exercises.dips.currentWeight || 0;
-      const p1RM = data.exercises.pullups.oneRM || pW;
-      const d1RM = data.exercises.dips.oneRM || dW;
+      points.sort((a, b) => a.date.localeCompare(b.date));
+      const cutStr = getPeriodCutStr(period);
+      if (cutStr) return points.filter(p => p.date >= cutStr);
+      return points;
+    }
+
+    function getBWProgressPoints(points, data) {
+      const bwHist = (data.profile.bodyweightHistory || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+      const fallbackBW = bwHist.length ? bwHist[0].weight : (data.profile.bodyweight || 0);
+
+      return points.map(p => {
+        let bw = fallbackBW;
+        for (let i = bwHist.length - 1; i >= 0; i--) {
+          if (bwHist[i].date <= p.date) {
+            bw = bwHist[i].weight;
+            break;
+          }
+        }
+        const pct = bw > 0 ? roundToHalf((p.weight / bw) * 100) : 0;
+        return { date: p.date, weight: p.weight, bw, pct };
+      });
+    }
+
+    function renderProgressContent() {
+      const data = loadData();
+      if (!data) return;
+      const ex = data.exercises[progressEx] || { currentWeight: 0, oneRM: 0 };
+      const points = getProgressPoints(progressEx, progressPeriod);
+      const container = document.getElementById('progress-content');
+      if (!container) return;
+
+      const periodHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);">WEIGHT OVER TIME</div>
+      <div class="period-tabs" id="period-tabs">
+        <button class="period-tab${progressPeriod === '1m' ? ' active' : ''}" data-p="1m">1M</button>
+        <button class="period-tab${progressPeriod === '3m' ? ' active' : ''}" data-p="3m">3M</button>
+        <button class="period-tab${progressPeriod === 'all' ? ' active' : ''}" data-p="all">ALL</button>
+      </div>
+    </div>`;
+
+      const periodStartWeight = points.length ? points[0].weight : null;
+      const added = periodStartWeight !== null ? ex.currentWeight - periodStartWeight : null;
+      const startedHTML = periodStartWeight !== null
+        ? `${periodStartWeight}<span style="font-size:12px;font-weight:500;color:var(--muted);">kg</span>`
+        : `<span style="color:var(--muted);">—</span>`;
+      const addedHTML = added !== null
+        ? `<span class="${added >= 0 ? 'green' : ''}">${added >= 0 ? '+' : ''}${added.toFixed(2).replace(/\.?0+$/, '')}<span style="font-size:12px;font-weight:500;">kg</span></span>`
+        : `<span style="color:var(--muted);">—</span>`;
+
+      const statsHTML = `
+    <div class="stats-strip" style="margin-bottom:12px;">
+      <div class="stat-cell">
+        <div class="stat-label">STARTED</div>
+        <div class="stat-value">${startedHTML}</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">CURRENT</div>
+        <div class="stat-value">${ex.currentWeight || 0}<span style="font-size:12px;font-weight:500;color:var(--muted);">kg</span></div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">ADDED</div>
+        <div class="stat-value">${addedHTML}</div>
+      </div>
+    </div>`;
+
+      const pW = data.exercises.pullups?.currentWeight || 0;
+      const dW = data.exercises.dips?.currentWeight || 0;
       const bw = data.profile.bodyweight || 0;
 
-      container.innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-      <div class="card" style="text-align:center;">
-        <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;">PULL-UPS 1RM</div>
-        <div style="font-size:28px;font-weight:900;color:var(--accent);margin-top:4px;">${fmtWeight(p1RM)}<span>kg</span></div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Current: ${fmtWeight(pW)}kg</div>
-      </div>
-      <div class="card" style="text-align:center;">
-        <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;">DIPS 1RM</div>
-        <div style="font-size:28px;font-weight:900;color:var(--accent);margin-top:4px;">${fmtWeight(d1RM)}<span>kg</span></div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Current: ${fmtWeight(dW)}kg</div>
-      </div>
-    </div>
+      const summaryCardHTML = `
     <div class="card" style="margin-bottom:16px;">
       <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;">Bodyweight Ratio</div>
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
@@ -3062,6 +3158,232 @@
         <strong style="font-size:15px;color:var(--accent);">${bw > 0 ? `${Math.round(((bw + dW) / bw) * 100)}%` : '—'}</strong>
       </div>
     </div>`;
+
+      container.innerHTML = periodHTML +
+        `<div class="chart-wrap" style="margin-bottom:12px;position:relative;">
+      <canvas class="progress-canvas" id="progress-canvas" style="height:200px;width:100%;"></canvas>
+      <div class="chart-tooltip" id="chart-tooltip"></div>
+    </div>` +
+        `<div class="chart-wrap" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 12px 2px;font-size:11px;font-weight:700;">
+        <span style="color:#0099ff;">● BW (kg)</span>
+        <span style="color:#00cc66;">● % BW</span>
+      </div>
+      <canvas class="progress-canvas" id="bw-progress-canvas" style="height:110px;width:100%;"></canvas>
+    </div>` + statsHTML + summaryCardHTML;
+
+      document.getElementById('period-tabs')?.querySelectorAll('.period-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          progressPeriod = btn.dataset.p;
+          renderProgressContent();
+        });
+      });
+
+      const canvas = document.getElementById('progress-canvas');
+      if (canvas) {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = canvas.clientWidth * dpr;
+        canvas.height = canvas.clientHeight * dpr;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        drawProgressChart(ctx, points, canvas.clientWidth, canvas.clientHeight);
+
+        canvas.addEventListener('click', e => handleChartClick(e, canvas, points));
+        canvas.addEventListener('touchstart', e => { e.preventDefault(); handleChartClick(e, canvas, points); }, { passive: false });
+      }
+
+      const bwCanvas = document.getElementById('bw-progress-canvas');
+      if (bwCanvas) {
+        const bwDpr = window.devicePixelRatio || 1;
+        bwCanvas.width = bwCanvas.clientWidth * bwDpr;
+        bwCanvas.height = bwCanvas.clientHeight * bwDpr;
+        const bwCtx = bwCanvas.getContext('2d');
+        bwCtx.scale(bwDpr, bwDpr);
+        const bwPoints = getBWProgressPoints(points, data);
+        drawBWProgressChart(bwCtx, bwPoints, bwCanvas.clientWidth, bwCanvas.clientHeight);
+      }
+    }
+
+    function drawProgressChart(ctx, points, W, H) {
+      const PAD = { top: 16, right: 16, bottom: 36, left: 44 };
+      const innerW = W - PAD.left - PAD.right;
+      const innerH = H - PAD.top - PAD.bottom;
+
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(0, 0, W, H);
+
+      if (points.length < 2) {
+        ctx.fillStyle = '#444';
+        ctx.font = `13px system-ui`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Log more sessions to see progress', W / 2, H / 2);
+        return;
+      }
+
+      const weights = points.map(p => p.weight);
+      const minW = Math.min(...weights);
+      const maxW = Math.max(...weights);
+      const wPad = (maxW - minW) * 0.1 || 2;
+      const lo = Math.max(0, minW - wPad), hi = maxW + wPad;
+      const wRange = hi - lo || 1;
+
+      const dates = points.map(p => new Date(p.date + 'T12:00:00').getTime());
+      const minD = dates[0], maxD = dates[dates.length - 1];
+      const dRange = maxD - minD || 1;
+
+      const toX = d => PAD.left + ((d - minD) / dRange) * innerW;
+      const toY = w => PAD.top + ((hi - w) / wRange) * innerH;
+
+      const gridCount = 4;
+      ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 1;
+      for (let i = 0; i <= gridCount; i++) {
+        const y = PAD.top + (i / gridCount) * innerH;
+        const wv = hi - (i / gridCount) * wRange;
+        ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(W - PAD.right, y); ctx.stroke();
+        ctx.fillStyle = '#444'; ctx.font = '10px system-ui'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        ctx.fillText(wv % 1 === 0 ? wv : wv.toFixed(1), PAD.left - 4, y);
+      }
+
+      const step = Math.ceil(points.length / 5);
+      ctx.fillStyle = '#444'; ctx.font = '10px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      for (let i = 0; i < points.length; i += step) {
+        const d = new Date(points[i].date + 'T12:00:00');
+        ctx.fillText(`${d.getDate()}/${d.getMonth() + 1}`, toX(dates[i]), H - PAD.bottom + 6);
+      }
+
+      const coords = points.map((p, i) => [toX(dates[i]), toY(p.weight)]);
+      ctx.strokeStyle = '#FFD600'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(coords[0][0], coords[0][1]);
+      for (let i = 1; i < coords.length; i++) {
+        const [px, py] = coords[i - 1], [cx, cy] = coords[i];
+        const cpx = (px + cx) / 2;
+        ctx.bezierCurveTo(cpx, py, cpx, cy, cx, cy);
+      }
+      ctx.stroke();
+
+      ctx.fillStyle = '#FFD600';
+      coords.forEach(([x, y]) => {
+        ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.fillStyle = '#0a0a0a';
+      coords.forEach(([x, y]) => {
+        ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI * 2); ctx.fill();
+      });
+
+      ctx.canvas._chartCoords = coords.map((c, i) => ({ x: c[0], y: c[1], weight: points[i].weight, date: points[i].date }));
+    }
+
+    function handleChartClick(e, canvas, points) {
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches?.[0] || e;
+      const mx = (touch.clientX - rect.left);
+      const my = (touch.clientY - rect.top);
+      const coords = canvas._chartCoords;
+      if (!coords) return;
+      let nearest = null, minDist = Infinity;
+      coords.forEach(p => {
+        const dist = Math.hypot(p.x - mx, p.y - my);
+        if (dist < minDist) { minDist = dist; nearest = p; }
+      });
+      const tip = document.getElementById('chart-tooltip');
+      if (!tip) return;
+      if (nearest && minDist < 32) {
+        const dateParts = nearest.date.split('-');
+        const dateDisplay = `${dateParts[2]}/${dateParts[1]}`;
+        tip.textContent = `${dateDisplay} · ${nearest.weight}kg`;
+        tip.style.display = 'block';
+        const left = Math.min(Math.max(nearest.x - tip.offsetWidth / 2, 4), canvas.clientWidth - tip.offsetWidth - 4);
+        const top = Math.max(nearest.y - 40, 4);
+        tip.style.left = left + 'px';
+        tip.style.top = top + 'px';
+      } else {
+        tip.style.display = 'none';
+      }
+    }
+
+    function drawBWProgressChart(ctx, bwPoints, W, H) {
+      const PAD = { top: 12, right: 36, bottom: 24, left: 36 };
+      const innerW = W - PAD.left - PAD.right;
+      const innerH = H - PAD.top - PAD.bottom;
+
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(0, 0, W, H);
+
+      if (bwPoints.length < 2) {
+        ctx.fillStyle = '#444';
+        ctx.font = `12px system-ui`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Log more sessions to see progress', W / 2, H / 2);
+        return;
+      }
+
+      const bws = bwPoints.map(p => p.bw);
+      const pcts = bwPoints.map(p => p.pct);
+
+      const minBW = Math.min(...bws), maxBW = Math.max(...bws);
+      const bwPad = (maxBW - minBW) * 0.1 || 2;
+      const loBW = Math.max(0, minBW - bwPad), hiBW = maxBW + bwPad;
+      const bwRange = hiBW - loBW || 1;
+
+      const minPct = Math.min(...pcts), maxPct = Math.max(...pcts);
+      const pctPad = (maxPct - minPct) * 0.1 || 5;
+      const loPct = Math.max(0, minPct - pctPad), hiPct = maxPct + pctPad;
+      const pctRange = hiPct - loPct || 1;
+
+      const dates = bwPoints.map(p => new Date(p.date + 'T12:00:00').getTime());
+      const minD = dates[0], maxD = dates[dates.length - 1];
+      const dRange = maxD - minD || 1;
+
+      const toX = d => PAD.left + ((d - minD) / dRange) * innerW;
+      const toYBW = b => PAD.top + ((hiBW - b) / bwRange) * innerH;
+      const toYPct = p => PAD.top + ((hiPct - p) / pctRange) * innerH;
+
+      const gridCount = 3;
+      ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 1;
+      for (let i = 0; i <= gridCount; i++) {
+        const y = PAD.top + (i / gridCount) * innerH;
+        ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(W - PAD.right, y); ctx.stroke();
+        const bwVal = hiBW - (i / gridCount) * bwRange;
+        ctx.fillStyle = '#0099ff'; ctx.font = '9px system-ui'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        ctx.fillText(bwVal % 1 === 0 ? `${bwVal}k` : `${bwVal.toFixed(1)}k`, PAD.left - 4, y);
+        const pctVal = hiPct - (i / gridCount) * pctRange;
+        ctx.fillStyle = '#00cc66'; ctx.textAlign = 'left';
+        ctx.fillText(`${pctVal.toFixed(0)}%`, W - PAD.right + 4, y);
+      }
+
+      const step = Math.ceil(bwPoints.length / 5);
+      ctx.fillStyle = '#444'; ctx.font = '9px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      for (let i = 0; i < bwPoints.length; i += step) {
+        const d = new Date(bwPoints[i].date + 'T12:00:00');
+        ctx.fillText(`${d.getDate()}/${d.getMonth() + 1}`, toX(dates[i]), H - PAD.bottom + 4);
+      }
+
+      const bwCoords = bwPoints.map((p, i) => [toX(dates[i]), toYBW(p.bw)]);
+      ctx.strokeStyle = '#0099ff'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(bwCoords[0][0], bwCoords[0][1]);
+      for (let i = 1; i < bwCoords.length; i++) {
+        const [px, py] = bwCoords[i - 1], [cx, cy] = bwCoords[i];
+        const cpx = (px + cx) / 2;
+        ctx.bezierCurveTo(cpx, py, cpx, cy, cx, cy);
+      }
+      ctx.stroke();
+
+      const pctCoords = bwPoints.map((p, i) => [toX(dates[i]), toYPct(p.pct)]);
+      ctx.strokeStyle = '#00cc66'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(pctCoords[0][0], pctCoords[0][1]);
+      for (let i = 1; i < pctCoords.length; i++) {
+        const [px, py] = pctCoords[i - 1], [cx, cy] = pctCoords[i];
+        const cpx = (px + cx) / 2;
+        ctx.bezierCurveTo(cpx, py, cpx, cy, cx, cy);
+      }
+      ctx.stroke();
     }
 
     // ═══════════════════════════════════════════════════════════════
