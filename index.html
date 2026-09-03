@@ -2060,8 +2060,8 @@
     // ODIN ENGINE IMPLEMENTATION
     // ═══════════════════════════════════════════════════════════════
 
-    const APP_VERSION = '1.0.9';
-    const BUILD_TIMESTAMP = '2026-09-03 22:30';
+    const APP_VERSION = '1.1.1';
+    const BUILD_TIMESTAMP = '2026-09-03 23:10';
 
     function roundToHalf(value) { return Math.round((value || 0) * 2) / 2; }
     function roundTo125(value) { return Math.round((value || 0) / 1.25) * 1.25; }
@@ -2864,14 +2864,18 @@
         skill_a: 'SKILL A',
         skill_b: 'SKILL B',
         hypertrophy_a: 'HYPERTROPHY A',
-        hypertrophy_b: 'HYPERTROPHY B'
+        hypertrophy_b: 'HYPERTROPHY B',
+        rogue_heavy: 'ROGUE HEAVY',
+        rogue_assistance: 'ROGUE ASSIST'
       };
 
       const badgeClsMap = {
         skill_a: 'heavy',
         skill_b: 'assistance',
         hypertrophy_a: 'heavy',
-        hypertrophy_b: 'assistance'
+        hypertrophy_b: 'assistance',
+        rogue_heavy: 'heavy',
+        rogue_assistance: 'assistance'
       };
 
       container.innerHTML = '';
@@ -2885,11 +2889,12 @@
         let exSummary = '';
         let bodyHTML = '';
 
-        if (s.type === 'skill_a') {
+        if (s.type === 'skill_a' || s.type === 'rogue_heavy') {
           const pu = detail?.pullups || { weightUsed: 0, sets: [] };
           const d = detail?.dips || { weightUsed: 0, sets: [] };
           const hp = detail?.highPullups || { sets: [] };
-          exSummary = `Pull-ups ${pu.weightUsed > 0 ? pu.weightUsed + 'kg' : 'BW'} • Dips ${d.weightUsed > 0 ? d.weightUsed + 'kg' : 'BW'} • High Pull-ups`;
+          const hasHP = hp.sets && hp.sets.length > 0 && s.type === 'skill_a';
+          exSummary = `Pull-ups ${pu.weightUsed > 0 ? pu.weightUsed + 'kg' : 'BW'} • Dips ${d.weightUsed > 0 ? d.weightUsed + 'kg' : 'BW'}${hasHP ? ' • High Pull-ups' : ''}`;
 
           const puSetsText = (pu.sets || []).map((r, i) => `<div class="history-set-row">Set ${i + 1}: ${r} reps</div>`).join('') || '<div class="history-set-row">No sets logged</div>';
           const dipSetsText = (d.sets || []).map((r, i) => `<div class="history-set-row">Set ${i + 1}: ${r} reps</div>`).join('') || '<div class="history-set-row">No sets logged</div>';
@@ -2897,6 +2902,19 @@
 
           const puBadge = pu.progressed ? `<span class="inc-chip up" style="font-size:10px;padding:2px 6px;margin-left:6px;">+2.5kg</span>` : '';
           const dipBadge = d.progressed ? `<span class="inc-chip up" style="font-size:10px;padding:2px 6px;margin-left:6px;">+2.5kg</span>` : '';
+
+          const hpSection = hasHP ? `
+            <div class="history-ex-section">
+              <div class="history-ex-name">3. High Pull-ups</div>
+              <div class="history-ex-weight">BW</div>
+              ${hpSetsText}
+            </div>` : '';
+
+          const notesHTML = s.notes ? `
+            <div class="history-notes">
+              <div class="history-notes-label">Notes</div>
+              <div class="history-notes-text">${s.notes}</div>
+            </div>` : '';
 
           bodyHTML = `
             <div class="history-ex-section">
@@ -2909,11 +2927,34 @@
               <div class="history-ex-weight">${d.weightUsed > 0 ? d.weightUsed + 'kg' : 'BW'}</div>
               ${dipSetsText}
             </div>
+            ${hpSection}
+            ${notesHTML}`;
+        } else if (s.type === 'rogue_assistance') {
+          const cu = detail?.chinups || { weightUsed: 0, sets: [] };
+          const pd = detail?.pausedDips || { weightUsed: 0, sets: [] };
+          exSummary = `Chin-ups ${cu.weightUsed > 0 ? cu.weightUsed + 'kg' : 'BW'} • Paused Dips ${pd.weightUsed > 0 ? pd.weightUsed + 'kg' : 'BW'}`;
+
+          const cuSetsText = (cu.sets || []).map((r, i) => `<div class="history-set-row">Set ${i + 1}: ${r} reps</div>`).join('') || '<div class="history-set-row">No sets logged</div>';
+          const pdSetsText = (pd.sets || []).map((r, i) => `<div class="history-set-row">Set ${i + 1}: ${r} reps</div>`).join('') || '<div class="history-set-row">No sets logged</div>';
+
+          const notesHTML = s.notes ? `
+            <div class="history-notes">
+              <div class="history-notes-label">Notes</div>
+              <div class="history-notes-text">${s.notes}</div>
+            </div>` : '';
+
+          bodyHTML = `
             <div class="history-ex-section">
-              <div class="history-ex-name">3. High Pull-ups</div>
-              <div class="history-ex-weight">BW</div>
-              ${hpSetsText}
-            </div>`;
+              <div class="history-ex-name">1. Weighted Chin-ups</div>
+              <div class="history-ex-weight">${cu.weightUsed > 0 ? cu.weightUsed + 'kg' : 'BW'}</div>
+              ${cuSetsText}
+            </div>
+            <div class="history-ex-section">
+              <div class="history-ex-name">2. Paused Dips</div>
+              <div class="history-ex-weight">${pd.weightUsed > 0 ? pd.weightUsed + 'kg' : 'BW'}</div>
+              ${pdSetsText}
+            </div>
+            ${notesHTML}`;
         } else if (s.type === 'skill_b') {
           const pu = detail?.pullups || { weightUsed: 0, sets: [] };
           const d = detail?.dips || { weightUsed: 0, sets: [] };
@@ -3055,6 +3096,7 @@
       const points = [];
 
       rawSessions.forEach(s => {
+        if (s.type === 'rogue_assistance') return;
         let w = null;
         if (s.detail && s.detail[exId] && s.detail[exId].weightUsed !== undefined) {
           w = s.detail[exId].weightUsed;
