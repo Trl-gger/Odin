@@ -2060,8 +2060,8 @@
     // ODIN ENGINE IMPLEMENTATION
     // ═══════════════════════════════════════════════════════════════
 
-    const APP_VERSION = '1.2.1';
-    const BUILD_TIMESTAMP = '2026-09-07 22:31';
+    const APP_VERSION = '1.2.4';
+    const BUILD_TIMESTAMP = '2026-09-07 22:52';
 
     function roundToHalf(value) { return Math.round((value || 0) * 2) / 2; }
     function roundTo125(value) { return Math.round((value || 0) / 1.25) * 1.25; }
@@ -3172,25 +3172,30 @@
       const ex = data.exercises[exId];
       const rawSessions = ex.sessions || [];
 
-      // Filter to Skill A sessions only (Skill A is the only progression day)
-      const skillASessions = rawSessions.filter(s => s.type === 'skill_a');
+      function extractWeight(s) {
+        const detail = s.detail || s.skillA;
+        if (detail && detail[exId] && detail[exId].weightUsed !== undefined) return detail[exId].weightUsed;
+        if (s.actualWeight !== undefined) return s.actualWeight;
+        if (s.weightUsed !== undefined) return s.weightUsed;
+        if (s.loggedSets && s.loggedSets[exId] && s.loggedSets[exId][0] && s.loggedSets[exId][0].weight !== undefined) return s.loggedSets[exId][0].weight;
+        return null;
+      }
 
-      // Group by ISO week (take highest weight per week)
-      const weekGroups = {};
-      skillASessions.forEach(s => {
-        let w = null;
-        if (s.detail && s.detail[exId] && s.detail[exId].weightUsed !== undefined) {
-          w = s.detail[exId].weightUsed;
-        } else if (s.skillA && s.skillA[exId] && s.skillA[exId].weightUsed !== undefined) {
-          w = s.skillA[exId].weightUsed;
-        } else if (s.actualWeight !== undefined) {
-          w = s.actualWeight;
-        } else if (s.weightUsed !== undefined) {
-          w = s.weightUsed;
-        } else if (s.loggedSets && s.loggedSets[exId] && s.loggedSets[exId][0] && s.loggedSets[exId][0].weight !== undefined) {
-          w = s.loggedSets[exId][0].weight;
+      // Rogue-era sessions (rogue_heavy, or any rogue_* type) → one point per session
+      const rogueSessions = rawSessions.filter(s => s.type && s.type.startsWith('rogue_'));
+      const roguePoints = [];
+      rogueSessions.forEach(s => {
+        const w = extractWeight(s);
+        if (w !== null && !isNaN(w) && s.date) {
+          roguePoints.push({ date: s.date, weight: w });
         }
+      });
 
+      // Odin skill sessions (skill_a, skill_b) → one point per ISO week, highest weight wins
+      const odinSessions = rawSessions.filter(s => s.type === 'skill_a' || s.type === 'skill_b');
+      const weekGroups = {};
+      odinSessions.forEach(s => {
+        const w = extractWeight(s);
         if (w !== null && !isNaN(w) && s.date) {
           const wk = isoWeekKey(s.date);
           if (!weekGroups[wk] || w > weekGroups[wk].weight) {
@@ -3198,8 +3203,11 @@
           }
         }
       });
+      const weeklyPoints = Object.values(weekGroups);
 
-      const points = Object.values(weekGroups).sort((a, b) => a.date.localeCompare(b.date));
+      // Merge and sort chronologically
+      const points = [...roguePoints, ...weeklyPoints].sort((a, b) => a.date.localeCompare(b.date));
+
       const cutStr = getPeriodCutStr(period);
       if (cutStr) return points.filter(p => p.date >= cutStr);
       return points;
