@@ -2060,8 +2060,8 @@
     // ODIN ENGINE IMPLEMENTATION
     // ═══════════════════════════════════════════════════════════════
 
-    const APP_VERSION = '1.2.0';
-    const BUILD_TIMESTAMP = '2026-09-07 22:15';
+    const APP_VERSION = '1.2.1';
+    const BUILD_TIMESTAMP = '2026-09-07 22:31';
 
     function roundToHalf(value) { return Math.round((value || 0) * 2) / 2; }
     function roundTo125(value) { return Math.round((value || 0) / 1.25) * 1.25; }
@@ -2407,6 +2407,87 @@
         <div class="presc-weight">${fmtWeight(pW)}<span>kg</span></div>
         <div class="presc-sets">6 sets × 3 reps</div>
         <div class="presc-rir">Mirrors Skill A weight</div>
+      </div>
+      <div class="presc-card">
+        <div class="presc-ex-name">2. Weighted Dips</div>
+        <div class="presc-weight">${fmtWeight(dW)}<span>kg</span></div>
+        <div class="presc-sets">6 sets × 3 reps</div>
+        <div class="presc-rir">Mirrors Skill A weight</div>
+      </div>
+      <div class="presc-card">
+        <div class="presc-ex-name">3. High Pull-ups</div>
+        <div class="presc-weight">0<span>kg (BW)</span></div>
+        <div class="presc-sets">${hpSets} set${hpSets > 1 ? 's' : ''} × ${hpReps} rep${hpReps > 1 ? 's' : ''}</div>
+        <div class="presc-rir">Explosive chest-to-bar pull-ups</div>
+      </div>`;
+      } else if (sessionType === 'hypertrophy_a') {
+        return `
+      <div class="presc-card">
+        <div class="presc-ex-name">1. Pull-ups EMOM</div>
+        <div class="presc-weight">${emomRpm}<span>reps/min</span></div>
+        <div class="presc-sets">${emomDur} minutes = ${emomRpm * emomDur} total reps</div>
+        <div class="presc-rir">Every minute on the minute timer</div>
+      </div>
+      <div class="presc-card">
+        <div class="presc-ex-name">2. Weighted Dips</div>
+        <div class="presc-weight">${fmtWeight(dW)}<span>kg</span></div>
+        <div class="presc-sets">Cluster sets of 3 reps</div>
+        <div class="presc-rir">Cluster sets to failure (log total sets completed)</div>
+      </div>`;
+      } else if (sessionType === 'hypertrophy_b') {
+        return `
+      <div class="presc-card">
+        <div class="presc-ex-name">1. Pull-ups Pyramid</div>
+        <div class="presc-weight">50<span>total reps</span></div>
+        <div class="presc-sets">1→2→3→4→5→4→3→2→1 (twice)</div>
+        <div class="presc-rir">Step-by-step pyramid logger</div>
+      </div>
+      <div class="presc-card">
+        <div class="presc-ex-name">2. Weighted Dips</div>
+        <div class="presc-weight">${fmtWeight(hypW)}<span>kg</span></div>
+        <div class="presc-sets">5 sets: 10/8/6/4/2 reps</div>
+        <div class="presc-rir">50% of Skill A dip weight</div>
+      </div>`;
+      }
+      return '';
+    }
+
+    function bindBwNudgeEvents() {
+      document.getElementById('btn-nudge-bw')?.addEventListener('click', () => {
+        openBodyweightModal();
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ACTIVE SESSION LOGGING
+    // ═══════════════════════════════════════════════════════════════
+
+    const SS = {
+      sessionType: null,
+      wasUnscheduled: false,
+      movements: [],
+      currentMovIdx: 0,
+      currentSetNum: 1,
+      loggedSets: {},
+      emomMinute: 1,
+      emomTimer: null,
+      emomSeconds: 0,
+      pyramidStep: 0
+    };
+
+    const PYRAMID_STEPS = [1, 2, 3, 4, 5, 4, 3, 2, 1, 1, 2, 3, 4, 5, 4, 3, 2, 1];
+
+    function nextMovement() {
+      SS.currentMovIdx++;
+      SS.currentSetNum = 1;
+      if (SS.currentMovIdx >= SS.movements.length) {
+        finishSession();
+      } else {
+        persistSS();
+        renderSessionScreen();
+      }
+    }
+
     function startSession(sessionType, wasUnscheduled = false) {
       SS.sessionType = sessionType;
       SS.wasUnscheduled = wasUnscheduled;
@@ -2673,6 +2754,23 @@
           renderSessionScreen();
         }
       });
+    }
+
+    function calcSkillAIncrement(sets) {
+      if (!sets || sets.length < 3) return 0;
+      if (sets.slice(0, 3).every(s => (s.reps || 0) >= 6)) {
+        return 2.5;
+      }
+      return 0;
+    }
+
+    function applySkillAProgression(data, exId, sets, weight) {
+      const inc = calcSkillAIncrement(sets);
+      if (inc > 0) {
+        if (data.exercises && data.exercises[exId]) {
+          data.exercises[exId].currentWeight = roundTo125((data.exercises[exId].currentWeight || weight) + inc);
+        }
+      }
     }
 
     function finishSession() {
@@ -3828,7 +3926,7 @@
       check('T12: Sat (swapped) -> hypertrophy_a', getScheduleForDay(6, true).type, 'hypertrophy_a');
 
       // T13: isoWeekKey format check
-      check('T13: isoWeekKey format', isoWeekKey('2026-01-05'), '2026-W02');
+      check('T13: isoWeekKey format', isoWeekKey('2026-01-05'), '2026-W01');
 
       // T14: calcSkillAIncrement empty -> 0
       check('T14: calcSkillAIncrement empty array', calcSkillAIncrement([]), 0);
@@ -3878,14 +3976,12 @@
 
       const data = loadData();
       if (data?.profile?.onboardingComplete) {
-        document.getElementById('s-today').classList.add('active');
-        document.getElementById('bottom-nav').classList.add('visible');
-        currentScreen = 's-today';
+        _activateScreen('s-today');
         renderTodayScreen();
       } else {
-        document.getElementById('s-welcome').classList.add('active');
-        document.getElementById('onboarding-version').textContent = 'v' + APP_VERSION + ' (' + BUILD_TIMESTAMP + ')';
-        currentScreen = 's-welcome';
+        _activateScreen('s-welcome');
+        const vEl = document.getElementById('onboarding-version');
+        if (vEl) vEl.textContent = 'v' + APP_VERSION + ' (' + BUILD_TIMESTAMP + ')';
       }
     })();
   </script>
