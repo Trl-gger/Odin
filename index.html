@@ -2062,8 +2062,8 @@
     // ODIN ENGINE IMPLEMENTATION
     // ═══════════════════════════════════════════════════════════════
 
-    const APP_VERSION = '1.2.5';
-    const BUILD_TIMESTAMP = '2026-09-08 19:55';
+    const APP_VERSION = '1.2.6';
+    const BUILD_TIMESTAMP = '2026-09-08 20:15';
 
     function escapeHtml(str) {
       return (str || '')
@@ -3358,7 +3358,7 @@
         `<div class="chart-wrap" style="margin-bottom:12px;">
       <div style="display:flex;align-items:center;gap:12px;padding:8px 12px 2px;font-size:11px;font-weight:700;">
         <span style="color:#0099ff;">● BW (kg)</span>
-        <span style="color:#00cc66;">● % BW</span>
+        <span style="color:#FFD600;">● Added weight (kg)</span>
       </div>
       <canvas class="progress-canvas" id="bw-progress-canvas" style="height:110px;width:100%;"></canvas>
     </div>` + statsHTML + summaryCardHTML;
@@ -3496,7 +3496,7 @@
     }
 
     function drawBWProgressChart(ctx, bwPoints, W, H) {
-      const PAD = { top: 12, right: 36, bottom: 24, left: 36 };
+      const PAD = { top: 12, right: 16, bottom: 24, left: 38 };
       const innerW = W - PAD.left - PAD.right;
       const innerH = H - PAD.top - PAD.bottom;
 
@@ -3514,37 +3514,32 @@
       }
 
       const bws = bwPoints.map(p => p.bw);
-      const pcts = bwPoints.map(p => p.pct);
+      const weights = bwPoints.map(p => p.weight);
 
-      const minBW = Math.min(...bws), maxBW = Math.max(...bws);
-      const bwPad = (maxBW - minBW) * 0.1 || 2;
-      const loBW = Math.max(0, minBW - bwPad), hiBW = maxBW + bwPad;
-      const bwRange = hiBW - loBW || 1;
-
-      const minPct = Math.min(...pcts), maxPct = Math.max(...pcts);
-      const pctPad = (maxPct - minPct) * 0.1 || 5;
-      const loPct = Math.max(0, minPct - pctPad), hiPct = maxPct + pctPad;
-      const pctRange = hiPct - loPct || 1;
+      const maxBW = Math.max(...bws, 0);
+      const maxW = Math.max(...weights, 0);
+      const peak = Math.max(maxBW, maxW, 1);
+      // Ensure headroom above peak (at least bodyweight value)
+      const rawMax = Math.max(peak * 1.08, peak + 5);
+      const hi = Math.ceil(rawMax / 15) * 15;
+      const lo = 0;
+      const valRange = hi - lo || 1;
 
       const dates = bwPoints.map(p => new Date(p.date + 'T12:00:00').getTime());
       const minD = dates[0], maxD = dates[dates.length - 1];
       const dRange = maxD - minD || 1;
 
       const toX = d => PAD.left + ((d - minD) / dRange) * innerW;
-      const toYBW = b => PAD.top + ((hiBW - b) / bwRange) * innerH;
-      const toYPct = p => PAD.top + ((hiPct - p) / pctRange) * innerH;
+      const toY = v => PAD.top + ((hi - v) / valRange) * innerH;
 
       const gridCount = 3;
       ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 1;
       for (let i = 0; i <= gridCount; i++) {
         const y = PAD.top + (i / gridCount) * innerH;
         ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(W - PAD.right, y); ctx.stroke();
-        const bwVal = hiBW - (i / gridCount) * bwRange;
-        ctx.fillStyle = '#0099ff'; ctx.font = '9px system-ui'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-        ctx.fillText(bwVal % 1 === 0 ? `${bwVal}k` : `${bwVal.toFixed(1)}k`, PAD.left - 4, y);
-        const pctVal = hiPct - (i / gridCount) * pctRange;
-        ctx.fillStyle = '#00cc66'; ctx.textAlign = 'left';
-        ctx.fillText(`${pctVal.toFixed(0)}%`, W - PAD.right + 4, y);
+        const v = hi - (i / gridCount) * valRange;
+        ctx.fillStyle = '#444'; ctx.font = '9px system-ui'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        ctx.fillText(`${Math.round(v)}kg`, PAD.left - 4, y);
       }
 
       const step = Math.ceil(bwPoints.length / 5);
@@ -3554,7 +3549,8 @@
         ctx.fillText(`${d.getDate()}/${d.getMonth() + 1}`, toX(dates[i]), H - PAD.bottom + 4);
       }
 
-      const bwCoords = bwPoints.map((p, i) => [toX(dates[i]), toYBW(p.bw)]);
+      // Line 1 — Bodyweight (blue #0099ff, same as before)
+      const bwCoords = bwPoints.map((p, i) => [toX(dates[i]), toY(p.bw)]);
       ctx.strokeStyle = '#0099ff'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
       ctx.beginPath();
       ctx.moveTo(bwCoords[0][0], bwCoords[0][1]);
@@ -3565,16 +3561,26 @@
       }
       ctx.stroke();
 
-      const pctCoords = bwPoints.map((p, i) => [toX(dates[i]), toYPct(p.pct)]);
-      ctx.strokeStyle = '#00cc66'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+      // Line 2 — Added weight (yellow #FFD600, same as main progress chart)
+      const weightCoords = bwPoints.map((p, i) => [toX(dates[i]), toY(p.weight)]);
+      ctx.strokeStyle = '#FFD600'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
       ctx.beginPath();
-      ctx.moveTo(pctCoords[0][0], pctCoords[0][1]);
-      for (let i = 1; i < pctCoords.length; i++) {
-        const [px, py] = pctCoords[i - 1], [cx, cy] = pctCoords[i];
+      ctx.moveTo(weightCoords[0][0], weightCoords[0][1]);
+      for (let i = 1; i < weightCoords.length; i++) {
+        const [px, py] = weightCoords[i - 1], [cx, cy] = weightCoords[i];
         const cpx = (px + cx) / 2;
         ctx.bezierCurveTo(cpx, py, cpx, cy, cx, cy);
       }
       ctx.stroke();
+
+      ctx.fillStyle = '#FFD600';
+      weightCoords.forEach(([x, y]) => {
+        ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.fillStyle = '#0a0a0a';
+      weightCoords.forEach(([x, y]) => {
+        ctx.beginPath(); ctx.arc(x, y, 1, 0, Math.PI * 2); ctx.fill();
+      });
     }
 
     // ═══════════════════════════════════════════════════════════════
