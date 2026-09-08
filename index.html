@@ -2062,8 +2062,8 @@
     // ODIN ENGINE IMPLEMENTATION
     // ═══════════════════════════════════════════════════════════════
 
-    const APP_VERSION = '1.2.6';
-    const BUILD_TIMESTAMP = '2026-09-08 08:15';
+    const APP_VERSION = '1.2.7';
+    const BUILD_TIMESTAMP = '2026-09-08 08:35';
 
     function escapeHtml(str) {
       return (str || '')
@@ -3211,6 +3211,8 @@
       return `${d.getFullYear()}-W${String(week).padStart(2, '0')}`;
     }
 
+    const ODIN_TRANSITION_DATE = '2026-08-28';
+
     function getProgressPoints(exId, period) {
       const data = loadData();
       if (!data || !data.exercises || !data.exercises[exId]) return [];
@@ -3226,32 +3228,41 @@
         return null;
       }
 
-      // Rogue-era sessions (rogue_heavy, or any rogue_* type) → one point per session
-      const rogueSessions = rawSessions.filter(s => s.type && s.type.startsWith('rogue_'));
-      const roguePoints = [];
-      rogueSessions.forEach(s => {
-        const w = extractWeight(s);
-        if (w !== null && !isNaN(w) && s.date) {
-          roguePoints.push({ date: s.date, weight: w });
-        }
-      });
+      // Pre-Odin / Rogue era (< 2026-08-28):
+      // Each session is an individual progression point
+      const preTransitionMap = {};
+      // Post-Odin era (>= 2026-08-28):
+      // Odin has weight progression once a week -> group by ISO week, highest weight wins
+      const postTransitionWeekGroups = {};
 
-      // Odin skill sessions (skill_a, skill_b) → one point per ISO week, highest weight wins
-      const odinSessions = rawSessions.filter(s => s.type === 'skill_a' || s.type === 'skill_b');
-      const weekGroups = {};
-      odinSessions.forEach(s => {
+      rawSessions.forEach(s => {
+        if (!s.date) return;
+        if (s.type === 'rogue_assistance') return;
+
         const w = extractWeight(s);
-        if (w !== null && !isNaN(w) && s.date) {
+        if (w === null || isNaN(w)) return;
+
+        if (s.date < ODIN_TRANSITION_DATE) {
+          // Rogue era: one point per session date (if multiple on same date, highest weight wins)
+          if (!preTransitionMap[s.date] || w > preTransitionMap[s.date].weight) {
+            preTransitionMap[s.date] = { date: s.date, weight: w };
+          }
+        } else {
+          // Odin era: only progression skill sessions (skill_a, skill_b), grouped weekly
+          if (s.type === 'hypertrophy_a' || s.type === 'hypertrophy_b') return;
+
           const wk = isoWeekKey(s.date);
-          if (!weekGroups[wk] || w > weekGroups[wk].weight) {
-            weekGroups[wk] = { date: s.date, weight: w };
+          if (!postTransitionWeekGroups[wk] || w > postTransitionWeekGroups[wk].weight) {
+            postTransitionWeekGroups[wk] = { date: s.date, weight: w };
           }
         }
       });
-      const weeklyPoints = Object.values(weekGroups);
+
+      const prePoints = Object.values(preTransitionMap);
+      const postPoints = Object.values(postTransitionWeekGroups);
 
       // Merge and sort chronologically
-      const points = [...roguePoints, ...weeklyPoints].sort((a, b) => a.date.localeCompare(b.date));
+      const points = [...prePoints, ...postPoints].sort((a, b) => a.date.localeCompare(b.date));
 
       const cutStr = getPeriodCutStr(period);
       if (cutStr) return points.filter(p => p.date >= cutStr);
@@ -3993,6 +4004,29 @@
 
       // T17: escapeHtml escapes dangerous characters
       check('T17: escapeHtml helper', escapeHtml('<b>test & "quote"</b>'), '&lt;b&gt;test &amp; &quot;quote&quot;&lt;/b&gt;');
+
+      // T18: Progression points grouping (per-session before Aug 28, weekly on/after Aug 28)
+      const mockRawSessions = [
+        { date: '2026-06-22', type: 'skill_a', detail: { pullups: { weightUsed: 10 } } },
+        { date: '2026-06-26', type: 'skill_a', detail: { pullups: { weightUsed: 12.5 } } },
+        { date: '2026-08-31', type: 'skill_a', detail: { pullups: { weightUsed: 25 } } },
+        { date: '2026-09-02', type: 'skill_b', detail: { pullups: { weightUsed: 25 } } },
+        { date: '2026-09-07', type: 'skill_a', detail: { pullups: { weightUsed: 27.5 } } }
+      ];
+      const preMap = {}, postMap = {};
+      mockRawSessions.forEach(s => {
+        const w = s.detail.pullups.weightUsed;
+        if (s.date < ODIN_TRANSITION_DATE) {
+          if (!preMap[s.date] || w > preMap[s.date].weight) preMap[s.date] = { date: s.date, weight: w };
+        } else {
+          const wk = isoWeekKey(s.date);
+          if (!postMap[wk] || w > postMap[wk].weight) postMap[wk] = { date: s.date, weight: w };
+        }
+      });
+      const mockPoints = [...Object.values(preMap), ...Object.values(postMap)].sort((a, b) => a.date.localeCompare(b.date));
+      check('T18: Progress points transition count (2 pre + 2 post = 4)', mockPoints.length, 4);
+      check('T18: Pre-transition preserves both session points in same week', mockPoints[0].date === '2026-06-22' && mockPoints[1].date === '2026-06-26', true);
+      check('T18: Post-transition groups into weekly points', mockPoints[2].date === '2026-08-31' && mockPoints[3].date === '2026-09-07', true);
 
       console.log(`ODIN TESTS COMPLETE: ${passed}/${total} passed`);
     })();
