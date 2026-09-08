@@ -2062,8 +2062,8 @@
     // ODIN ENGINE IMPLEMENTATION
     // ═══════════════════════════════════════════════════════════════
 
-    const APP_VERSION = '1.2.7';
-    const BUILD_TIMESTAMP = '2026-09-08 08:35';
+    const APP_VERSION = '1.2.5';
+    const BUILD_TIMESTAMP = '2026-09-08 19:55';
 
     function escapeHtml(str) {
       return (str || '')
@@ -3237,19 +3237,19 @@
 
       rawSessions.forEach(s => {
         if (!s.date) return;
-        if (s.type === 'rogue_assistance') return;
 
         const w = extractWeight(s);
         if (w === null || isNaN(w)) return;
 
         if (s.date < ODIN_TRANSITION_DATE) {
-          // Rogue era: one point per session date (if multiple on same date, highest weight wins)
+          // Rogue era: one point per session date
+          if (s.type === 'rogue_assistance') return;
           if (!preTransitionMap[s.date] || w > preTransitionMap[s.date].weight) {
             preTransitionMap[s.date] = { date: s.date, weight: w };
           }
         } else {
-          // Odin era: only progression skill sessions (skill_a, skill_b), grouped weekly
-          if (s.type === 'hypertrophy_a' || s.type === 'hypertrophy_b') return;
+          // Odin era: ONLY skill_a (the single weekly progression day), grouped by ISO week
+          if (s.type !== 'skill_a') return;
 
           const wk = isoWeekKey(s.date);
           if (!postTransitionWeekGroups[wk] || w > postTransitionWeekGroups[wk].weight) {
