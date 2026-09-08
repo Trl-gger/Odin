@@ -1245,8 +1245,7 @@
     }
 
     .history-notes {
-      margin-top: 12px;
-      padding-top: 12px;
+      padding: 10px 16px 12px;
       border-top: 1px solid var(--border);
     }
 
@@ -1261,8 +1260,10 @@
 
     .history-notes-text {
       font-size: 13px;
-      color: #666;
+      color: var(--muted);
       line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
     }
 
     .session-type-badge {
@@ -1832,7 +1833,8 @@
           <div class="screen-title" style="font-size:26px;">WORKOUT COMPLETE</div>
           <div class="screen-sub" id="complete-subtitle" style="margin-top:6px;">Great session!</div>
           <div class="gap-24"></div>
-          <div id="complete-summary" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:16px;text-align:left;margin-bottom:24px;"></div>
+          <div id="complete-summary" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:16px;text-align:left;margin-bottom:16px;"></div>
+          <textarea id="session-notes" class="notes-textarea" placeholder="Add a note about this session… (optional)" style="margin-bottom:20px;text-align:left;"></textarea>
           <button class="btn btn-primary" id="btn-complete-done">DONE</button>
         </div>
       </div>
@@ -2060,8 +2062,17 @@
     // ODIN ENGINE IMPLEMENTATION
     // ═══════════════════════════════════════════════════════════════
 
-    const APP_VERSION = '1.2.4';
-    const BUILD_TIMESTAMP = '2026-09-07 22:52';
+    const APP_VERSION = '1.2.6';
+    const BUILD_TIMESTAMP = '2026-09-08 08:15';
+
+    function escapeHtml(str) {
+      return (str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
 
     function roundToHalf(value) { return Math.round((value || 0) * 2) / 2; }
     function roundTo125(value) { return Math.round((value || 0) / 1.25) * 1.25; }
@@ -2848,11 +2859,13 @@
       clearPersistedSS();
 
       showScreen('s-complete');
-      renderSessionCompleteScreen(SS.sessionType, SS.loggedSets, data);
+      renderSessionCompleteScreen(SS.sessionType, SS.loggedSets, data, sessRecord);
     }
 
-    function renderSessionCompleteScreen(sessionType, loggedSets, data) {
+    function renderSessionCompleteScreen(sessionType, loggedSets, data, sessRecord) {
       const summaryContainer = document.getElementById('complete-summary');
+      const notesInput = document.getElementById('session-notes');
+      if (notesInput) notesInput.value = '';
       let html = '';
 
       const titleMap = {
@@ -2889,6 +2902,32 @@
 
       summaryContainer.innerHTML = html;
       document.getElementById('btn-complete-done').onclick = () => {
+        const noteText = notesInput ? notesInput.value.trim() : '';
+        if (noteText && sessRecord) {
+          sessRecord.notes = noteText;
+          const freshData = loadData() || data;
+          let updated = false;
+          const pSessions = freshData.exercises?.pullups?.sessions;
+          if (pSessions && pSessions.length > 0) {
+            const lastP = pSessions[pSessions.length - 1];
+            if (lastP.date === sessRecord.date && lastP.type === sessRecord.type) {
+              lastP.notes = noteText;
+              updated = true;
+            }
+          }
+          const dSessions = freshData.exercises?.dips?.sessions;
+          if (dSessions && dSessions.length > 0) {
+            const lastD = dSessions[dSessions.length - 1];
+            if (lastD.date === sessRecord.date && lastD.type === sessRecord.type) {
+              lastD.notes = noteText;
+              updated = true;
+            }
+          }
+          if (updated) {
+            saveData(freshData);
+          }
+        }
+        if (notesInput) notesInput.value = '';
         showScreen('s-today');
         renderTodayScreen();
       };
@@ -2917,7 +2956,11 @@
       const map = {};
       [...pSess, ...dSess].forEach(s => {
         const k = `${s.date}_${s.type}`;
-        if (!map[k]) map[k] = s;
+        if (!map[k]) {
+          map[k] = s;
+        } else {
+          if (!map[k].notes && s.notes) map[k].notes = s.notes;
+        }
       });
 
       const list = Object.values(map).sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -2981,12 +3024,6 @@
               ${hpSetsText}
             </div>` : '';
 
-          const notesHTML = s.notes ? `
-            <div class="history-notes">
-              <div class="history-notes-label">Notes</div>
-              <div class="history-notes-text">${s.notes}</div>
-            </div>` : '';
-
           bodyHTML = `
             <div class="history-ex-section">
               <div class="history-ex-name">1. Weighted Pull-ups ${puBadge}</div>
@@ -2998,8 +3035,7 @@
               <div class="history-ex-weight">${d.weightUsed > 0 ? d.weightUsed + 'kg' : 'BW'}</div>
               ${dipSetsText}
             </div>
-            ${hpSection}
-            ${notesHTML}`;
+            ${hpSection}`;
         } else if (s.type === 'rogue_assistance') {
           const cu = detail?.chinups || { weightUsed: 0, sets: [] };
           const pd = detail?.pausedDips || { weightUsed: 0, sets: [] };
@@ -3007,12 +3043,6 @@
 
           const cuSetsText = (cu.sets || []).map((r, i) => `<div class="history-set-row">Set ${i + 1}: ${r} reps</div>`).join('') || '<div class="history-set-row">No sets logged</div>';
           const pdSetsText = (pd.sets || []).map((r, i) => `<div class="history-set-row">Set ${i + 1}: ${r} reps</div>`).join('') || '<div class="history-set-row">No sets logged</div>';
-
-          const notesHTML = s.notes ? `
-            <div class="history-notes">
-              <div class="history-notes-label">Notes</div>
-              <div class="history-notes-text">${s.notes}</div>
-            </div>` : '';
 
           bodyHTML = `
             <div class="history-ex-section">
@@ -3024,8 +3054,7 @@
               <div class="history-ex-name">2. Paused Dips</div>
               <div class="history-ex-weight">${pd.weightUsed > 0 ? pd.weightUsed + 'kg' : 'BW'}</div>
               ${pdSetsText}
-            </div>
-            ${notesHTML}`;
+            </div>`;
         } else if (s.type === 'skill_b') {
           const pu = detail?.pullups || { weightUsed: 0, sets: [] };
           const d = detail?.dips || { weightUsed: 0, sets: [] };
@@ -3093,6 +3122,15 @@
           bodyHTML = `<div class="history-set-row">Completed workout session</div>`;
         }
 
+        let notesHTML = '';
+        if (s.notes && s.notes.trim()) {
+          notesHTML = `
+            <div class="history-notes">
+              <div class="history-notes-label">NOTES</div>
+              <div class="history-notes-text">${escapeHtml(s.notes.trim())}</div>
+            </div>`;
+        }
+
         const card = document.createElement('div');
         card.className = 'history-card';
         card.style.marginBottom = '8px';
@@ -3112,11 +3150,18 @@
           </div>
           <div class="history-card-body">
             ${bodyHTML}
-          </div>`;
+          </div>
+          ${notesHTML}`;
 
         card.querySelector('.history-card-head').addEventListener('click', () => {
           card.classList.toggle('open');
         });
+        const notesEl = card.querySelector('.history-notes');
+        if (notesEl) {
+          notesEl.addEventListener('click', () => {
+            card.classList.toggle('open');
+          });
+        }
 
         container.appendChild(card);
       });
@@ -3279,18 +3324,18 @@
 
       const summaryCardHTML = `
     <div class="card" style="margin-bottom:16px;">
-      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;">Bodyweight Ratio</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;">Strength Relative to Bodyweight</div>
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
         <span style="font-size:13px;color:var(--muted);">Current Bodyweight</span>
         <strong style="font-size:15px;color:var(--text);">${bw ? `${bw}kg` : 'Not set'}</strong>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
-        <span style="font-size:13px;color:var(--muted);">Pull-ups % Bodyweight</span>
-        <strong style="font-size:15px;color:var(--accent);">${bw > 0 ? `${Math.round(((bw + pW) / bw) * 100)}%` : '—'}</strong>
+        <span style="font-size:13px;color:var(--muted);">Pull-ups (added / BW)</span>
+        <strong style="font-size:15px;color:var(--accent);">${bw > 0 ? `${Math.round((pW / bw) * 100)}%` : '—'}</strong>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;">
-        <span style="font-size:13px;color:var(--muted);">Dips % Bodyweight</span>
-        <strong style="font-size:15px;color:var(--accent);">${bw > 0 ? `${Math.round(((bw + dW) / bw) * 100)}%` : '—'}</strong>
+        <span style="font-size:13px;color:var(--muted);">Dips (added / BW)</span>
+        <strong style="font-size:15px;color:var(--accent);">${bw > 0 ? `${Math.round((dW / bw) * 100)}%` : '—'}</strong>
       </div>
     </div>`;
 
@@ -3938,6 +3983,16 @@
 
       // T14: calcSkillAIncrement empty -> 0
       check('T14: calcSkillAIncrement empty array', calcSkillAIncrement([]), 0);
+
+      // T15: Bodyweight ratio formula (added / bw * 100)
+      const calcBwRatio = (added, bw) => bw > 0 ? `${Math.round((added / bw) * 100)}%` : '—';
+      check('T15: Bodyweight ratio (25kg / 73kg = 34%)', calcBwRatio(25, 73), '34%');
+
+      // T16: Bodyweight ratio when BW not set
+      check('T16: Bodyweight ratio when BW not set', calcBwRatio(25, 0), '—');
+
+      // T17: escapeHtml escapes dangerous characters
+      check('T17: escapeHtml helper', escapeHtml('<b>test & "quote"</b>'), '&lt;b&gt;test &amp; &quot;quote&quot;&lt;/b&gt;');
 
       console.log(`ODIN TESTS COMPLETE: ${passed}/${total} passed`);
     })();
