@@ -2062,8 +2062,8 @@
     // ODIN ENGINE IMPLEMENTATION
     // ═══════════════════════════════════════════════════════════════
 
-    const APP_VERSION = '1.2.6';
-    const BUILD_TIMESTAMP = '2026-09-08 20:15';
+    const APP_VERSION = '1.2.8';
+    const BUILD_TIMESTAMP = '2026-09-12 12:25';
 
     function escapeHtml(str) {
       return (str || '')
@@ -3794,7 +3794,7 @@
           if (rpm > 1) { rpm--; updateEmomLabels(); saveEmom(); }
         });
         document.getElementById('btn-emom-rpm-plus')?.addEventListener('click', () => {
-          if (rpm < 10) { rpm++; updateEmomLabels(); saveEmom(); }
+          rpm++; updateEmomLabels(); saveEmom();
         });
         document.getElementById('btn-emom-dur-minus')?.addEventListener('click', () => {
           if (dur > 5) { dur--; updateEmomLabels(); saveEmom(); }
@@ -4079,8 +4079,27 @@
 
       const data = loadData();
       if (data?.profile?.onboardingComplete) {
-        _activateScreen('s-today');
-        renderTodayScreen();
+        // Restore mid-session if one was interrupted
+        let sessionRestored = false;
+        try {
+          const rawSS = localStorage.getItem(SS_STORAGE_KEY);
+          if (rawSS) {
+            const savedSS = JSON.parse(rawSS);
+            if (savedSS?.sessionType && Array.isArray(savedSS?.movements) && savedSS.movements.length > 0) {
+              Object.assign(SS, savedSS);
+              SS.emomTimer = null; // timers can't be serialised — cleared on restore
+              showScreen('s-session');
+              renderSessionScreen();
+              sessionRestored = true;
+            }
+          }
+        } catch (e) {
+          clearPersistedSS();
+        }
+        if (!sessionRestored) {
+          _activateScreen('s-today');
+          renderTodayScreen();
+        }
       } else {
         _activateScreen('s-welcome');
         const vEl = document.getElementById('onboarding-version');
