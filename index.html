@@ -1856,10 +1856,10 @@
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;">
-          <button class="option-btn" data-type="skill_a">SKILL A — Pull-ups 3×6, Dips 3×6, High Pull-ups</button>
-          <button class="option-btn" data-type="skill_b">SKILL B — Pull-ups 6×3, Dips 6×3, High Pull-ups</button>
+          <button class="option-btn" data-type="skill_a">SKILL A — Pull-ups 3×6, Dips 3×6</button>
+          <button class="option-btn" data-type="skill_b">SKILL B — Pull-ups 6×3, Dips 6×3</button>
           <button class="option-btn" data-type="hypertrophy_a">HYPERTROPHY A — Pull-ups EMOM, Dips cluster sets to failure</button>
-          <button class="option-btn" data-type="hypertrophy_b">HYPERTROPHY B — Pull-ups Pyramid, Dips 10/8/6/4/2 descending</button>
+          <button class="option-btn" data-type="hypertrophy_b">HYPERTROPHY B — Weighted Pull-ups, Dips 10/8/6/4/2 descending</button>
         </div>
         <div class="scroll-pad"></div>
       </div>
@@ -1980,6 +1980,20 @@
     </div>
   </div>
 
+  <!-- Modal: First-time Hypertrophy B Pull-up Weight Prompt -->
+  <div class="modal-overlay" id="modal-hb-weight-prompt">
+    <div class="modal-card">
+      <div class="modal-title">Starting Pull-up Weight</div>
+      <div class="modal-body" style="margin-bottom:12px;font-size:13px;">Enter added weight for Hypertrophy B pull-ups (kg):</div>
+      <input type="text" class="set-number-input" id="mhb-input" inputmode="decimal"
+        style="width:100%;margin-bottom:16px;font-size:24px;text-align:center;" placeholder="0" />
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="mhb-cancel">Cancel</button>
+        <button class="btn btn-primary" id="mhb-confirm">Start Session</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Settings — Bodyweight Adjust -->
   <div class="modal-overlay" id="modal-bodyweight-adjust">
     <div class="modal-card">
@@ -2062,8 +2076,8 @@
     // ODIN ENGINE IMPLEMENTATION
     // ═══════════════════════════════════════════════════════════════
 
-    const APP_VERSION = '1.2.8';
-    const BUILD_TIMESTAMP = '2026-09-12 12:25';
+    const APP_VERSION = '1.2.9';
+    const BUILD_TIMESTAMP = '2026-10-10 17:57';
 
     function escapeHtml(str) {
       return (str || '')
@@ -2096,8 +2110,9 @@
           exportReminderCount: 0,
           emomRepsPerMin: 3,
           emomDurationMins: 30,
-          highPullupSets: 4,
-          highPullupReps: 1,
+          hbPullupSets: 3,
+          hbPullupReps: 12,
+          hbPullupWeight: null,
           hypertrophySwapped: false
         },
         exercises: {
@@ -2118,10 +2133,14 @@
         const data = JSON.parse(r);
         if (!data.profile) data.profile = {};
         if (data.profile.hypDipWeight !== undefined) delete data.profile.hypDipWeight;
+        if (data.profile.highPullupSets !== undefined) delete data.profile.highPullupSets;
+        if (data.profile.highPullupReps !== undefined) delete data.profile.highPullupReps;
+        if (data.profile.pyramidWeight !== undefined) delete data.profile.pyramidWeight;
         if (data.profile.emomRepsPerMin === undefined) data.profile.emomRepsPerMin = 3;
         if (data.profile.emomDurationMins === undefined) data.profile.emomDurationMins = 30;
-        if (data.profile.highPullupSets === undefined) data.profile.highPullupSets = 4;
-        if (data.profile.highPullupReps === undefined) data.profile.highPullupReps = 1;
+        if (data.profile.hbPullupSets === undefined) data.profile.hbPullupSets = 3;
+        if (data.profile.hbPullupReps === undefined) data.profile.hbPullupReps = 12;
+        if (data.profile.hbPullupWeight === undefined) data.profile.hbPullupWeight = null;
         if (data.profile.hypertrophySwapped === undefined) data.profile.hypertrophySwapped = false;
         if (!data.profile.bodyweightHistory) data.profile.bodyweightHistory = [];
         if (!data.exercises) data.exercises = {};
@@ -2388,8 +2407,6 @@
       const hypW = getHypDipWeight(data);
       const emomRpm = data.profile.emomRepsPerMin || 3;
       const emomDur = data.profile.emomDurationMins || 30;
-      const hpSets = data.profile.highPullupSets || 4;
-      const hpReps = data.profile.highPullupReps || 1;
 
       if (sessionType === 'skill_a') {
         return `
@@ -2404,12 +2421,6 @@
         <div class="presc-weight">${fmtWeight(dW)}<span>kg</span></div>
         <div class="presc-sets">3 sets × 6 reps</div>
         <div class="presc-rir">3 sets × 6 reps — hit all 3 to progress</div>
-      </div>
-      <div class="presc-card">
-        <div class="presc-ex-name">3. High Pull-ups</div>
-        <div class="presc-weight">0<span>kg (BW)</span></div>
-        <div class="presc-sets">${hpSets} set${hpSets > 1 ? 's' : ''} × ${hpReps} rep${hpReps > 1 ? 's' : ''}</div>
-        <div class="presc-rir">Explosive chest-to-bar pull-ups</div>
       </div>`;
       } else if (sessionType === 'skill_b') {
         return `
@@ -2424,12 +2435,6 @@
         <div class="presc-weight">${fmtWeight(dW)}<span>kg</span></div>
         <div class="presc-sets">6 sets × 3 reps</div>
         <div class="presc-rir">Mirrors Skill A weight</div>
-      </div>
-      <div class="presc-card">
-        <div class="presc-ex-name">3. High Pull-ups</div>
-        <div class="presc-weight">0<span>kg (BW)</span></div>
-        <div class="presc-sets">${hpSets} set${hpSets > 1 ? 's' : ''} × ${hpReps} rep${hpReps > 1 ? 's' : ''}</div>
-        <div class="presc-rir">Explosive chest-to-bar pull-ups</div>
       </div>`;
       } else if (sessionType === 'hypertrophy_a') {
         return `
@@ -2446,12 +2451,16 @@
         <div class="presc-rir">Cluster sets to failure (log total sets completed)</div>
       </div>`;
       } else if (sessionType === 'hypertrophy_b') {
+        const hbSets = data.profile.hbPullupSets || 3;
+        const hbReps = data.profile.hbPullupReps || 12;
+        const hbWeight = data.profile.hbPullupWeight !== null && data.profile.hbPullupWeight !== undefined ? data.profile.hbPullupWeight : null;
+        const hbWeightDisplay = hbWeight !== null ? `${fmtWeight(hbWeight)}<span>kg</span>` : `—<span>kg</span>`;
         return `
       <div class="presc-card">
-        <div class="presc-ex-name">1. Pull-ups Pyramid</div>
-        <div class="presc-weight">50<span>total reps</span></div>
-        <div class="presc-sets">1→2→3→4→5→4→3→2→1 (twice)</div>
-        <div class="presc-rir">Step-by-step pyramid logger</div>
+        <div class="presc-ex-name">1. Weighted Pull-ups</div>
+        <div class="presc-weight">${hbWeightDisplay}</div>
+        <div class="presc-sets">${hbSets} sets × ${hbReps} reps</div>
+        <div class="presc-rir">${hbSets} sets × ${hbReps} reps — hit all to progress</div>
       </div>
       <div class="presc-card">
         <div class="presc-ex-name">2. Weighted Dips</div>
@@ -2482,11 +2491,8 @@
       loggedSets: {},
       emomMinute: 1,
       emomTimer: null,
-      emomSeconds: 0,
-      pyramidStep: 0
+      emomSeconds: 0
     };
-
-    const PYRAMID_STEPS = [1, 2, 3, 4, 5, 4, 3, 2, 1, 1, 2, 3, 4, 5, 4, 3, 2, 1];
 
     function nextMovement() {
       SS.currentMovIdx++;
@@ -2499,7 +2505,28 @@
       }
     }
 
+    let pendingHbUnscheduled = false;
+
+    function promptHbStartingWeight(wasUnscheduled) {
+      pendingHbUnscheduled = wasUnscheduled;
+      const inp = document.getElementById('mhb-input');
+      if (inp) inp.value = '';
+      showModal('modal-hb-weight-prompt');
+    }
+
     function startSession(sessionType, wasUnscheduled = false) {
+      if (sessionType === 'hypertrophy_b') {
+        const data = loadData();
+        const w = data?.profile?.hbPullupWeight;
+        if (w === null || w === undefined || isNaN(w)) {
+          promptHbStartingWeight(wasUnscheduled);
+          return;
+        }
+      }
+      _startSessionDirect(sessionType, wasUnscheduled);
+    }
+
+    function _startSessionDirect(sessionType, wasUnscheduled = false) {
       SS.sessionType = sessionType;
       SS.wasUnscheduled = wasUnscheduled;
       SS.currentMovIdx = 0;
@@ -2507,15 +2534,13 @@
       SS.loggedSets = {};
       SS.emomMinute = 1;
       SS.emomSeconds = 0;
-      SS.pyramidStep = 0;
       if (SS.emomTimer) clearInterval(SS.emomTimer);
 
       const data = loadData();
       if (sessionType === 'skill_a' || sessionType === 'skill_b') {
         SS.movements = [
           { id: 'pullups', name: 'Weighted Pull-ups', totalSets: sessionType === 'skill_a' ? 3 : 6, targetReps: sessionType === 'skill_a' ? 6 : 3 },
-          { id: 'dips', name: 'Weighted Dips', totalSets: sessionType === 'skill_a' ? 3 : 6, targetReps: sessionType === 'skill_a' ? 6 : 3 },
-          { id: 'high_pullups', name: 'High Pull-ups', totalSets: data.profile.highPullupSets || 4, targetReps: data.profile.highPullupReps || 1, isHighPullups: true }
+          { id: 'dips', name: 'Weighted Dips', totalSets: sessionType === 'skill_a' ? 3 : 6, targetReps: sessionType === 'skill_a' ? 6 : 3 }
         ];
       } else if (sessionType === 'hypertrophy_a') {
         SS.movements = [
@@ -2523,8 +2548,10 @@
           { id: 'hyp_dips', name: 'Weighted Dips', totalSets: 1, targetReps: 3, isCluster: true }
         ];
       } else if (sessionType === 'hypertrophy_b') {
+        const hbSets = data.profile.hbPullupSets || 3;
+        const hbReps = data.profile.hbPullupReps || 12;
         SS.movements = [
-          { id: 'pyramid_pullups', name: 'Pull-ups Pyramid', isPyramid: true },
+          { id: 'pullups', name: 'Weighted Pull-ups', totalSets: hbSets, targetReps: hbReps, isHbPullups: true },
           { id: 'hyp_dips', name: 'Weighted Dips', totalSets: 5, repTargets: [10, 8, 6, 4, 2], isHypDips: true }
         ];
       }
@@ -2547,9 +2574,6 @@
         const emomDur = data.profile.emomDurationMins || 30;
         counter.textContent = `MINUTE ${SS.emomMinute} OF ${emomDur}`;
         progressBar.innerHTML = `<div class="spd active" style="width:100%;"></div>`;
-      } else if (mov.isPyramid) {
-        counter.textContent = `STEP ${SS.pyramidStep + 1} OF 18`;
-        progressBar.innerHTML = `<div class="spd active" style="width:100%;"></div>`;
       } else if (mov.isCluster) {
         counter.textContent = `CLUSTER SETS`;
         progressBar.innerHTML = `<div class="spd active" style="width:100%;"></div>`;
@@ -2564,7 +2588,7 @@
       }
 
       let weight = 0;
-      if (mov.id === 'pullups') weight = data.exercises.pullups.currentWeight || 0;
+      if (mov.id === 'pullups') weight = mov.isHbPullups ? (data.profile.hbPullupWeight || 0) : (data.exercises.pullups.currentWeight || 0);
       else if (mov.id === 'dips') weight = data.exercises.dips.currentWeight || 0;
       else if (mov.isCluster) weight = data.exercises.dips.currentWeight || 0;
       else if (mov.isHypDips) weight = getHypDipWeight(data);
@@ -2614,37 +2638,6 @@
         return;
       }
 
-      if (mov.isPyramid) {
-        const stepRep = PYRAMID_STEPS[SS.pyramidStep] || 1;
-        const completedReps = PYRAMID_STEPS.slice(0, SS.pyramidStep).reduce((a, b) => a + b, 0);
-
-        container.innerHTML = `
-      <div style="text-align:center;margin-bottom:20px;">
-        <div class="session-ex-name" style="font-size:22px;margin-bottom:4px;">Pull-ups Pyramid</div>
-        <div style="font-size:13px;color:var(--muted);">1→2→3→4→5→4→3→2→1 (twice = 50 reps)</div>
-      </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:24px;text-align:center;margin-bottom:20px;">
-        <div style="font-size:12px;font-weight:800;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;">CURRENT STEP REPS</div>
-        <div style="font-size:64px;font-weight:900;color:var(--accent);line-height:1;margin:8px 0;">${stepRep} <span style="font-size:20px;color:var(--muted);">reps</span></div>
-        <div style="font-size:13px;color:var(--muted);margin-top:8px;">Total completed: ${completedReps} / 50 reps</div>
-      </div>
-      <div style="flex:1;"></div>
-      <button class="btn btn-primary" id="btn-log-pyramid-step">LOG STEP ${SS.pyramidStep + 1} (${stepRep} REPS)</button>`;
-
-        document.getElementById('btn-log-pyramid-step')?.addEventListener('click', () => {
-          if (!SS.loggedSets['pyramid_pullups']) SS.loggedSets['pyramid_pullups'] = [];
-          SS.loggedSets['pyramid_pullups'].push({ step: SS.pyramidStep + 1, reps: stepRep });
-          if (SS.pyramidStep >= PYRAMID_STEPS.length - 1) {
-            nextMovement();
-          } else {
-            SS.pyramidStep++;
-            persistSS();
-            renderSessionScreen();
-          }
-        });
-        return;
-      }
-
       if (mov.isCluster) {
         const dW = data.exercises.dips.currentWeight || 0;
         if (SS.clusterRounds === undefined) SS.clusterRounds = 1;
@@ -2685,33 +2678,6 @@
           if (!SS.loggedSets['hyp_dips']) SS.loggedSets['hyp_dips'] = [];
           SS.loggedSets['hyp_dips'] = [{ roundsCompleted: SS.clusterRounds, repsPerRound: 3, weight: dW }];
           nextMovement();
-        });
-        return;
-      }
-
-      if (mov.isHighPullups) {
-        container.innerHTML = `
-      <div style="text-align:center;margin-bottom:20px;">
-        <div class="session-ex-name" style="font-size:22px;margin-bottom:4px;">High Pull-ups</div>
-        <div style="font-size:13px;color:var(--muted);">Explosive chest-to-bar pull-ups</div>
-      </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:20px;margin-bottom:20px;">
-        <div style="font-size:12px;font-weight:800;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">PREVIOUS SETS</div>
-        <div class="prev-sets">${prevSetsHTML || '<div style="font-size:12px;color:#444;">No sets logged yet</div>'}</div>
-      </div>
-      <div style="flex:1;"></div>
-      <button class="btn btn-primary" id="btn-log-high-pull">LOG SET ${SS.currentSetNum} (${mov.targetReps || 1} REP${(mov.targetReps || 1) > 1 ? 'S' : ''})</button>`;
-
-        document.getElementById('btn-log-high-pull')?.addEventListener('click', () => {
-          if (!SS.loggedSets[mov.id]) SS.loggedSets[mov.id] = [];
-          SS.loggedSets[mov.id].push({ reps: mov.targetReps || 1, weight: 0 });
-          if (SS.currentSetNum >= mov.totalSets) {
-            nextMovement();
-          } else {
-            SS.currentSetNum++;
-            persistSS();
-            renderSessionScreen();
-          }
         });
         return;
       }
@@ -2784,6 +2750,25 @@
       }
     }
 
+    function calcHbPullupIncrement(sets, targetSets, targetReps) {
+      const nSets = targetSets || 3;
+      const nReps = targetReps || 12;
+      if (!sets || sets.length < nSets) return 0;
+      if (sets.slice(0, nSets).every(s => (s.reps || 0) >= nReps)) {
+        return 2.5;
+      }
+      return 0;
+    }
+
+    function applyHbPullupProgression(data, sets) {
+      const targetSets = data.profile.hbPullupSets || 3;
+      const targetReps = data.profile.hbPullupReps || 12;
+      const inc = calcHbPullupIncrement(sets, targetSets, targetReps);
+      if (inc > 0) {
+        data.profile.hbPullupWeight = roundTo125((data.profile.hbPullupWeight || 0) + inc);
+      }
+    }
+
     function finishSession() {
       if (SS.emomTimer) clearInterval(SS.emomTimer);
       const data = loadData();
@@ -2803,23 +2788,19 @@
 
       const puSets = SS.loggedSets['pullups'] || [];
       const dipSets = SS.loggedSets['dips'] || [];
-      const highSets = SS.loggedSets['high_pullups'] || [];
       const emomSets = SS.loggedSets['emom_pullups'] || [];
-      const pyramidSets = SS.loggedSets['pyramid_pullups'] || [];
       const hypDipSets = SS.loggedSets['hyp_dips'] || [];
 
       if (SS.sessionType === 'skill_a') {
         sessRecord.detail = {
           pullups: { weightUsed: puWeightUsed, sets: puSets.map(s => s.reps), progressed: puSets.length >= 3 && puSets.every(s => s.reps >= 6) },
-          dips: { weightUsed: dipWeightUsed, sets: dipSets.map(s => s.reps), progressed: dipSets.length >= 3 && dipSets.every(s => s.reps >= 6) },
-          highPullups: { sets: highSets.map(s => s.reps) }
+          dips: { weightUsed: dipWeightUsed, sets: dipSets.map(s => s.reps), progressed: dipSets.length >= 3 && dipSets.every(s => s.reps >= 6) }
         };
         sessRecord.skillA = sessRecord.detail;
       } else if (SS.sessionType === 'skill_b') {
         sessRecord.detail = {
           pullups: { weightUsed: puWeightUsed, sets: puSets.map(s => s.reps) },
-          dips: { weightUsed: dipWeightUsed, sets: dipSets.map(s => s.reps) },
-          highPullups: { sets: highSets.map(s => s.reps) }
+          dips: { weightUsed: dipWeightUsed, sets: dipSets.map(s => s.reps) }
         };
       } else if (SS.sessionType === 'hypertrophy_a') {
         const totalEmomReps = emomSets.reduce((sum, s) => sum + (s.reps || 0), 0);
@@ -2830,14 +2811,17 @@
           hypDips: { weightUsed: dipWeightUsed, roundsCompleted: rounds, totalRounds: rounds, sets: Array(rounds).fill(3) }
         };
       } else if (SS.sessionType === 'hypertrophy_b') {
-        const totalPyramidReps = pyramidSets.reduce((sum, s) => sum + (s.reps || 0), 0);
+        const hbTargetReps = data.profile.hbPullupReps || 12;
+        const hbSetsCount = data.profile.hbPullupSets || 3;
+        const hbWeightUsed = data.profile.hbPullupWeight || 0;
+        const hbProgressed = calcHbPullupIncrement(puSets, hbSetsCount, hbTargetReps) > 0;
         sessRecord.detail = {
-          pyramidPullups: { totalReps: totalPyramidReps, stepsCompleted: pyramidSets.length, totalSteps: 18 },
+          pullups: { weightUsed: hbWeightUsed, sets: puSets.map(s => s.reps), progressed: hbProgressed },
           hypDips: { weightUsed: hypDipWeightUsed, sets: hypDipSets.map(s => s.reps) }
         };
       }
 
-      if (SS.loggedSets['pullups'] || SS.loggedSets['emom_pullups'] || SS.loggedSets['pyramid_pullups']) {
+      if (SS.loggedSets['pullups'] || SS.loggedSets['emom_pullups']) {
         if (!data.exercises.pullups.sessions) data.exercises.pullups.sessions = [];
         data.exercises.pullups.sessions.push(sessRecord);
       }
@@ -2852,6 +2836,10 @@
         }
         if (SS.loggedSets['dips']) {
           applySkillAProgression(data, 'dips', SS.loggedSets['dips'], data.exercises.dips.currentWeight || 0);
+        }
+      } else if (SS.sessionType === 'hypertrophy_b') {
+        if (SS.loggedSets['pullups']) {
+          applyHbPullupProgression(data, SS.loggedSets['pullups']);
         }
       }
 
@@ -2881,9 +2869,7 @@
         let label = key.toUpperCase();
         if (key === 'pullups') label = 'Weighted Pull-ups';
         if (key === 'dips') label = 'Weighted Dips';
-        if (key === 'high_pullups') label = 'High Pull-ups';
         if (key === 'emom_pullups') label = 'Pull-ups EMOM (30 min)';
-        if (key === 'pyramid_pullups') label = 'Pull-ups Pyramid (50 reps)';
         if (key === 'hyp_dips') label = 'Hypertrophy Dips';
 
         html += `
@@ -2898,6 +2884,14 @@
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--accent);font-weight:700;">
         ⚡ Skill A Progression applied for next session!
       </div>`;
+      } else if (sessionType === 'hypertrophy_b') {
+        const pu = sessRecord?.detail?.pullups;
+        if (pu?.progressed) {
+          html += `
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--accent);font-weight:700;">
+        ⚡ Hypertrophy B Pull-up Progression applied (+2.5kg for next session)!
+      </div>`;
+        }
       }
 
       summaryContainer.innerHTML = html;
@@ -3100,23 +3094,40 @@
               ${hdSetsText}
             </div>`;
         } else if (s.type === 'hypertrophy_b') {
-          const pyr = detail?.pyramidPullups || { totalReps: 0, stepsCompleted: 0, totalSteps: 18 };
           const hd = detail?.hypDips || { weightUsed: 0, sets: [] };
-          exSummary = `Pyramid ${pyr.totalReps || 0} reps • Dips ${hd.weightUsed > 0 ? hd.weightUsed + 'kg' : 'BW'}`;
+          const hdSetsText = (hd.sets || []).map((r, i) => `<div class="history-set-row">Set ${i + 1}: ${r} reps</div>`).join('') || `<div class="history-set-row">5 sets: 10/8/6/4/2</div>`;
 
-          const hdSetsText = (hd.sets || []).map((r, i) => `<div class="history-set-row">Set ${i + 1}: ${r} reps</div>`).join('') || `<div class="history-set-row">10 sets × 2 reps</div>`;
-
-          bodyHTML = `
-            <div class="history-ex-section">
-              <div class="history-ex-name">1. Pull-ups Pyramid</div>
-              <div class="history-ex-weight">50 target reps</div>
-              <div class="history-set-row">${pyr.totalReps || 0} total reps completed (${pyr.stepsCompleted || 0} of 18 steps)</div>
-            </div>
-            <div class="history-ex-section">
-              <div class="history-ex-name">2. Hypertrophy Dips</div>
-              <div class="history-ex-weight">${hd.weightUsed > 0 ? hd.weightUsed + 'kg' : 'BW'}</div>
-              ${hdSetsText}
-            </div>`;
+          if (detail?.pyramidPullups) {
+            const pyr = detail.pyramidPullups;
+            exSummary = `Pyramid ${pyr.totalReps || 0} reps • Dips ${hd.weightUsed > 0 ? hd.weightUsed + 'kg' : 'BW'}`;
+            bodyHTML = `
+              <div class="history-ex-section">
+                <div class="history-ex-name">1. Pull-ups Pyramid</div>
+                <div class="history-ex-weight">50 target reps</div>
+                <div class="history-set-row">${pyr.totalReps || 0} total reps completed (${pyr.stepsCompleted || 0} of 18 steps)</div>
+              </div>
+              <div class="history-ex-section">
+                <div class="history-ex-name">2. Hypertrophy Dips</div>
+                <div class="history-ex-weight">${hd.weightUsed > 0 ? hd.weightUsed + 'kg' : 'BW'}</div>
+                ${hdSetsText}
+              </div>`;
+          } else {
+            const pu = detail?.pullups || { weightUsed: 0, sets: [], progressed: false };
+            const puBadge = pu.progressed ? `<span class="inc-chip up" style="font-size:10px;padding:2px 6px;margin-left:6px;">+2.5kg</span>` : '';
+            exSummary = `Pull-ups ${pu.weightUsed > 0 ? pu.weightUsed + 'kg' : 'BW'} • Dips ${hd.weightUsed > 0 ? hd.weightUsed + 'kg' : 'BW'}`;
+            const puSetsText = (pu.sets || []).map((r, i) => `<div class="history-set-row">Set ${i + 1}: ${r} reps</div>`).join('') || '<div class="history-set-row">No sets logged</div>';
+            bodyHTML = `
+              <div class="history-ex-section">
+                <div class="history-ex-name">1. Weighted Pull-ups ${puBadge}</div>
+                <div class="history-ex-weight">${pu.weightUsed > 0 ? pu.weightUsed + 'kg' : 'BW'}</div>
+                ${puSetsText}
+              </div>
+              <div class="history-ex-section">
+                <div class="history-ex-name">2. Hypertrophy Dips</div>
+                <div class="history-ex-weight">${hd.weightUsed > 0 ? hd.weightUsed + 'kg' : 'BW'}</div>
+                ${hdSetsText}
+              </div>`;
+          }
         } else {
           exSummary = `Completed workout`;
           bodyHTML = `<div class="history-set-row">Completed workout session</div>`;
@@ -3639,6 +3650,13 @@
             <div style="font-size:12px;color:var(--muted);">${fmtWeight(hypW)}kg &nbsp;<span style="color:#555;">· auto (50% of Skill A dips)</span></div>
           </div>
         </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--text);">Hyp B Pull-ups</div>
+            <div style="font-size:12px;color:var(--muted);">${data.profile.hbPullupWeight !== null && data.profile.hbPullupWeight !== undefined ? fmtWeight(data.profile.hbPullupWeight) + 'kg' : 'Not set'}</div>
+          </div>
+          <button class="btn btn-ghost" id="btn-edit-hbpullups" style="width:auto;height:32px;padding:0 12px;font-size:12px;">Adjust</button>
+        </div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;">
           <div>
             <div style="font-size:14px;font-weight:700;color:var(--text);">Swap Hypertrophy Days</div>
@@ -3649,26 +3667,29 @@
       </div>
 
       <div class="card">
-        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">HIGH PULL-UPS CONFIG</div>
+        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">HYPERTROPHY B — PULL-UPS</div>
         <div style="padding:8px 0;border-bottom:1px solid var(--border);">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <div style="font-size:14px;font-weight:700;color:var(--text);">Sets</div>
             <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-hp-sets-minus">−</button>
-              <span id="hp-sets-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.highPullupSets || 4}</span>
-              <button class="stepper-btn" id="btn-hp-sets-plus">+</button>
+              <button class="stepper-btn" id="btn-hb-sets-minus">−</button>
+              <span id="hb-sets-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.hbPullupSets || 3}</span>
+              <button class="stepper-btn" id="btn-hb-sets-plus">+</button>
             </div>
           </div>
         </div>
-        <div style="padding:8px 0;">
+        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <div style="font-size:14px;font-weight:700;color:var(--text);">Reps per set</div>
             <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-hp-reps-minus">−</button>
-              <span id="hp-reps-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.highPullupReps || 1}</span>
-              <button class="stepper-btn" id="btn-hp-reps-plus">+</button>
+              <button class="stepper-btn" id="btn-hb-reps-minus">−</button>
+              <span id="hb-reps-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.hbPullupReps || 12}</span>
+              <button class="stepper-btn" id="btn-hb-reps-plus">+</button>
             </div>
           </div>
+        </div>
+        <div style="padding:10px 0;">
+          <div style="font-size:13px;color:var(--muted);">Total: <strong id="hb-total-label" style="color:var(--text);">${(data.profile.hbPullupSets || 3) * (data.profile.hbPullupReps || 12)} reps</strong></div>
         </div>
       </div>
 
@@ -3736,6 +3757,7 @@
       document.getElementById('btn-edit-bw')?.addEventListener('click', () => openBodyweightModal());
       document.getElementById('btn-edit-pullups')?.addEventListener('click', () => openWeightModal('pullups'));
       document.getElementById('btn-edit-dips')?.addEventListener('click', () => openWeightModal('dips'));
+      document.getElementById('btn-edit-hbpullups')?.addEventListener('click', () => openWeightModal('hb_pullups'));
       document.getElementById('btn-swap-days')?.addEventListener('click', () => {
         const d = loadData();
         d.profile.hypertrophySwapped = !d.profile.hypertrophySwapped;
@@ -3749,26 +3771,34 @@
       });
       document.getElementById('btn-reset-data')?.addEventListener('click', () => showModal('modal-reset1'));
 
-      (function bindHpSteppers() {
-        let sets = data.profile.highPullupSets || 4;
-        let reps = data.profile.highPullupReps || 1;
-        function saveHp() {
+      (function bindHbSteppers() {
+        let sets = data.profile.hbPullupSets || 3;
+        let reps = data.profile.hbPullupReps || 12;
+        const setsEl = document.getElementById('hb-sets-val');
+        const repsEl = document.getElementById('hb-reps-val');
+        const totEl = document.getElementById('hb-total-label');
+        function updateLabels() {
+          if (setsEl) setsEl.textContent = sets;
+          if (repsEl) repsEl.textContent = reps;
+          if (totEl) totEl.textContent = `${sets * reps} reps`;
+        }
+        function saveHb() {
           const d = loadData();
-          d.profile.highPullupSets = sets;
-          d.profile.highPullupReps = reps;
+          d.profile.hbPullupSets = sets;
+          d.profile.hbPullupReps = reps;
           saveData(d);
         }
-        document.getElementById('btn-hp-sets-minus')?.addEventListener('click', () => {
-          if (sets > 1) { sets--; document.getElementById('hp-sets-val').textContent = sets; saveHp(); }
+        document.getElementById('btn-hb-sets-minus')?.addEventListener('click', () => {
+          if (sets > 2) { sets--; updateLabels(); saveHb(); }
         });
-        document.getElementById('btn-hp-sets-plus')?.addEventListener('click', () => {
-          if (sets < 10) { sets++; document.getElementById('hp-sets-val').textContent = sets; saveHp(); }
+        document.getElementById('btn-hb-sets-plus')?.addEventListener('click', () => {
+          if (sets < 6) { sets++; updateLabels(); saveHb(); }
         });
-        document.getElementById('btn-hp-reps-minus')?.addEventListener('click', () => {
-          if (reps > 1) { reps--; document.getElementById('hp-reps-val').textContent = reps; saveHp(); }
+        document.getElementById('btn-hb-reps-minus')?.addEventListener('click', () => {
+          if (reps > 6) { reps--; updateLabels(); saveHb(); }
         });
-        document.getElementById('btn-hp-reps-plus')?.addEventListener('click', () => {
-          if (reps < 10) { reps++; document.getElementById('hp-reps-val').textContent = reps; saveHp(); }
+        document.getElementById('btn-hb-reps-plus')?.addEventListener('click', () => {
+          if (reps < 30) { reps++; updateLabels(); saveHb(); }
         });
       })();
 
@@ -3807,17 +3837,33 @@
 
     function openWeightModal(exId) {
       const data = loadData();
-      const w = data.exercises[exId]?.currentWeight || 0;
-      document.getElementById('mwa-title').textContent = `Adjust Weight — ${exId === 'pullups' ? 'Pull-ups' : 'Dips'}`;
+      let w = 0;
+      let title = '';
+      if (exId === 'pullups') {
+        w = data.exercises.pullups?.currentWeight || 0;
+        title = 'Adjust Weight — Skill A Pull-ups';
+      } else if (exId === 'dips') {
+        w = data.exercises.dips?.currentWeight || 0;
+        title = 'Adjust Weight — Skill A Dips';
+      } else if (exId === 'hb_pullups') {
+        w = data.profile.hbPullupWeight !== null && data.profile.hbPullupWeight !== undefined ? data.profile.hbPullupWeight : 0;
+        title = 'Adjust Weight — Hyp B Pull-ups';
+      }
+      document.getElementById('mwa-title').textContent = title;
       document.getElementById('mwa-current').textContent = `${w}kg`;
       document.getElementById('mwa-input').value = w;
       document.getElementById('mwa-save').onclick = () => {
         const nw = parseWeight(document.getElementById('mwa-input').value);
         if (!isNaN(nw) && nw >= 0) {
-          data.exercises[exId].currentWeight = roundTo125(nw);
+          if (exId === 'hb_pullups') {
+            data.profile.hbPullupWeight = roundTo125(nw);
+          } else {
+            data.exercises[exId].currentWeight = roundTo125(nw);
+          }
           saveData(data);
           hideModal('modal-weight-adjust');
           renderSettingsScreen();
+          renderTodayScreen();
         }
       };
       showModal('modal-weight-adjust');
@@ -4034,6 +4080,69 @@
       check('T18: Pre-transition preserves both session points in same week', mockPoints[0].date === '2026-06-22' && mockPoints[1].date === '2026-06-26', true);
       check('T18: Post-transition groups into weekly points', mockPoints[2].date === '2026-08-31' && mockPoints[3].date === '2026-09-07', true);
 
+      // HB1: HB pull-ups 12/12/12 -> +2.5kg
+      check('HB1: HB pull-ups 12/12/12 -> +2.5kg', calcHbPullupIncrement([{ reps: 12 }, { reps: 12 }, { reps: 12 }], 3, 12), 2.5);
+
+      // HB2: HB pull-ups 12/12/11 -> hold (0)
+      check('HB2: HB pull-ups 12/12/11 -> hold', calcHbPullupIncrement([{ reps: 12 }, { reps: 12 }, { reps: 11 }], 3, 12), 0);
+
+      // HB3: HB pull-ups incomplete sets (2 sets instead of 3) -> hold (0)
+      check('HB3: HB pull-ups incomplete sets (2 sets)', calcHbPullupIncrement([{ reps: 12 }, { reps: 12 }], 3, 12), 0);
+
+      // HB4: HB pull-ups custom targets (4 sets of 10)
+      check('HB4: HB custom target 4x10 success', calcHbPullupIncrement([{ reps: 10 }, { reps: 10 }, { reps: 10 }, { reps: 10 }], 4, 10), 2.5);
+      check('HB4: HB custom target 4x10 failure', calcHbPullupIncrement([{ reps: 10 }, { reps: 10 }, { reps: 10 }, { reps: 9 }], 4, 10), 0);
+
+      // HB5: applyHbPullupProgression adds 2.5kg on success
+      const hb5data = { profile: { hbPullupSets: 3, hbPullupReps: 12, hbPullupWeight: 10 } };
+      applyHbPullupProgression(hb5data, [{ reps: 12 }, { reps: 12 }, { reps: 12 }]);
+      check('HB5: applyHbPullupProgression adds 2.5kg', hb5data.profile.hbPullupWeight, 12.5);
+
+      // HB6: applyHbPullupProgression holds weight on failure
+      const hb6data = { profile: { hbPullupSets: 3, hbPullupReps: 12, hbPullupWeight: 10 } };
+      applyHbPullupProgression(hb6data, [{ reps: 12 }, { reps: 11 }, { reps: 12 }]);
+      check('HB6: applyHbPullupProgression holds weight on failure', hb6data.profile.hbPullupWeight, 10);
+
+      // HB7: Progression independence between HB and Skill A
+      const hb7data = {
+        profile: { hbPullupSets: 3, hbPullupReps: 12, hbPullupWeight: 10 },
+        exercises: {
+          pullups: { currentWeight: 30, oneRM: 30, sessions: [] },
+          dips: { currentWeight: 50, oneRM: 50, sessions: [] }
+        }
+      };
+      applyHbPullupProgression(hb7data, [{ reps: 12 }, { reps: 12 }, { reps: 12 }]);
+      check('HB7: HB progress does not affect Skill A pullup weight', hb7data.exercises.pullups.currentWeight, 30);
+      applySkillAProgression(hb7data, 'pullups', [{ reps: 6 }, { reps: 6 }, { reps: 6 }], 30);
+      check('HB7: Skill A progress does not affect HB pullup weight', hb7data.profile.hbPullupWeight, 12.5);
+      check('HB7: Skill A pullup weight progresses to 32.5', hb7data.exercises.pullups.currentWeight, 32.5);
+
+      // HB8: Settings migration test
+      const rawLegacyData = {
+        profile: {
+          highPullupSets: 4,
+          highPullupReps: 1,
+          pyramidWeight: 0,
+          onboardingComplete: true
+        },
+        exercises: {
+          pullups: { currentWeight: 20, oneRM: 20, sessions: [] },
+          dips: { currentWeight: 30, oneRM: 30, sessions: [] }
+        }
+      };
+      if (rawLegacyData.profile.highPullupSets !== undefined) delete rawLegacyData.profile.highPullupSets;
+      if (rawLegacyData.profile.highPullupReps !== undefined) delete rawLegacyData.profile.highPullupReps;
+      if (rawLegacyData.profile.pyramidWeight !== undefined) delete rawLegacyData.profile.pyramidWeight;
+      if (rawLegacyData.profile.hbPullupSets === undefined) rawLegacyData.profile.hbPullupSets = 3;
+      if (rawLegacyData.profile.hbPullupReps === undefined) rawLegacyData.profile.hbPullupReps = 12;
+      if (rawLegacyData.profile.hbPullupWeight === undefined) rawLegacyData.profile.hbPullupWeight = null;
+      check('HB8: Migration deletes highPullupSets', rawLegacyData.profile.highPullupSets, undefined);
+      check('HB8: Migration deletes highPullupReps', rawLegacyData.profile.highPullupReps, undefined);
+      check('HB8: Migration deletes pyramidWeight', rawLegacyData.profile.pyramidWeight, undefined);
+      check('HB8: Migration defaults hbPullupSets to 3', rawLegacyData.profile.hbPullupSets, 3);
+      check('HB8: Migration defaults hbPullupReps to 12', rawLegacyData.profile.hbPullupReps, 12);
+      check('HB8: Migration defaults hbPullupWeight to null', rawLegacyData.profile.hbPullupWeight, null);
+
       console.log(`ODIN TESTS COMPLETE: ${passed}/${total} passed`);
     })();
 
@@ -4075,6 +4184,28 @@
           const type = btn.dataset.type;
           startSession(type, true);
         });
+      });
+
+      document.getElementById('mhb-cancel')?.addEventListener('click', () => {
+        hideModal('modal-hb-weight-prompt');
+      });
+      document.getElementById('mhb-confirm')?.addEventListener('click', () => {
+        const inp = document.getElementById('mhb-input');
+        const val = parseWeight(inp?.value);
+        if (inp?.value.trim() === '' || isNaN(val) || val < 0) {
+          inp?.focus();
+          return;
+        }
+        const d = loadData();
+        d.profile.hbPullupWeight = roundTo125(val);
+        saveData(d);
+        hideModal('modal-hb-weight-prompt');
+        _startSessionDirect('hypertrophy_b', pendingHbUnscheduled);
+      });
+      document.getElementById('mhb-input')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          document.getElementById('mhb-confirm')?.click();
+        }
       });
 
       const data = loadData();
