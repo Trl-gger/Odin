@@ -1,5 +1,5 @@
 <<<<<<< HEAD
-const CACHE = 'odin-v1.2.7'; // Must match APP_VERSION in index.html — bump on every deployment
+const CACHE = 'odin-v1.2.9'; // Must match APP_VERSION in index.html — bump on every deployment
 =======
 const CACHE = 'odin-v1.2.9'; // Must match APP_VERSION in index.html — bump on every deployment
 >>>>>>> d9af1f339dca6922aec4e253e73cfc811876bfa0
