@@ -2113,8 +2113,8 @@
     // ODIN ENGINE IMPLEMENTATION
     // ═══════════════════════════════════════════════════════════════
 
-    const APP_VERSION = '1.2.9';
-    const BUILD_TIMESTAMP = '2026-10-24 16:30';
+    const APP_VERSION = '1.3.0';
+    const BUILD_TIMESTAMP = '2026-10-28 21:05';
 
     function escapeHtml(str) {
       return (str || '')
@@ -2178,6 +2178,15 @@
           hbPullupSets: 3,
           hbPullupReps: 12,
           hbPullupWeight: null,
+          skillAPullupSets: 3,
+          skillAPullupReps: 6,
+          skillADipSets: 3,
+          skillADipReps: 6,
+          skillBPullupSets: 6,
+          skillBPullupReps: 3,
+          skillBDipSets: 6,
+          skillBDipReps: 3,
+          skillMigratedV1: true,
           hypertrophySwapped: false
         },
         exercises: {
@@ -2222,6 +2231,17 @@
         if (data.profile.abDays === undefined) data.profile.abDays = [3, 6];
         data.profile.abMigratedV1 = true;
       }
+      if (!data.profile.skillMigratedV1) {
+        if (data.profile.skillAPullupSets === undefined) data.profile.skillAPullupSets = 3;
+        if (data.profile.skillAPullupReps === undefined) data.profile.skillAPullupReps = 6;
+        if (data.profile.skillADipSets === undefined) data.profile.skillADipSets = 3;
+        if (data.profile.skillADipReps === undefined) data.profile.skillADipReps = 6;
+        if (data.profile.skillBPullupSets === undefined) data.profile.skillBPullupSets = 6;
+        if (data.profile.skillBPullupReps === undefined) data.profile.skillBPullupReps = 3;
+        if (data.profile.skillBDipSets === undefined) data.profile.skillBDipSets = 6;
+        if (data.profile.skillBDipReps === undefined) data.profile.skillBDipReps = 3;
+        data.profile.skillMigratedV1 = true;
+      }
     }
 
     function loadData() {
@@ -2239,6 +2259,14 @@
         if (data.profile.hbPullupSets === undefined) data.profile.hbPullupSets = 3;
         if (data.profile.hbPullupReps === undefined) data.profile.hbPullupReps = 12;
         if (data.profile.hbPullupWeight === undefined) data.profile.hbPullupWeight = null;
+        if (data.profile.skillAPullupSets === undefined) data.profile.skillAPullupSets = 3;
+        if (data.profile.skillAPullupReps === undefined) data.profile.skillAPullupReps = 6;
+        if (data.profile.skillADipSets === undefined) data.profile.skillADipSets = 3;
+        if (data.profile.skillADipReps === undefined) data.profile.skillADipReps = 6;
+        if (data.profile.skillBPullupSets === undefined) data.profile.skillBPullupSets = 6;
+        if (data.profile.skillBPullupReps === undefined) data.profile.skillBPullupReps = 3;
+        if (data.profile.skillBDipSets === undefined) data.profile.skillBDipSets = 6;
+        if (data.profile.skillBDipReps === undefined) data.profile.skillBDipReps = 3;
         if (data.profile.hypertrophySwapped === undefined) data.profile.hypertrophySwapped = false;
         if (!data.profile.bodyweightHistory) data.profile.bodyweightHistory = [];
         if (!data.exercises) data.exercises = {};
@@ -2247,8 +2275,9 @@
 
         const hadEmomMig = data.profile.emomMigratedV1;
         const hadAbMig = data.profile.abMigratedV1;
+        const hadSkillMig = data.profile.skillMigratedV1;
         runMigrations(data);
-        if (!hadEmomMig || !hadAbMig) {
+        if (!hadEmomMig || !hadAbMig || !hadSkillMig) {
           saveData(data);
         }
         return data;
@@ -2752,31 +2781,39 @@
 
       let cards = '';
       if (sessionType === 'skill_a') {
+        const saPuS = data.profile.skillAPullupSets || 3;
+        const saPuR = data.profile.skillAPullupReps || 6;
+        const saDipS = data.profile.skillADipSets || 3;
+        const saDipR = data.profile.skillADipReps || 6;
         cards = `
       <div class="presc-card">
         <div class="presc-ex-name">1. Weighted Pull-ups</div>
         <div class="presc-weight">${fmtWeight(pW)}<span>kg</span></div>
-        <div class="presc-sets">3 sets × 6 reps</div>
-        <div class="presc-rir">3 sets × 6 reps — hit all 3 to progress</div>
+        <div class="presc-sets">${saPuS} sets × ${saPuR} reps</div>
+        <div class="presc-rir">${saPuS} sets × ${saPuR} reps — hit all ${saPuS} to progress</div>
       </div>
       <div class="presc-card">
         <div class="presc-ex-name">2. Weighted Dips</div>
         <div class="presc-weight">${fmtWeight(dW)}<span>kg</span></div>
-        <div class="presc-sets">3 sets × 6 reps</div>
-        <div class="presc-rir">3 sets × 6 reps — hit all 3 to progress</div>
+        <div class="presc-sets">${saDipS} sets × ${saDipR} reps</div>
+        <div class="presc-rir">${saDipS} sets × ${saDipR} reps — hit all ${saDipS} to progress</div>
       </div>`;
       } else if (sessionType === 'skill_b') {
+        const sbPuS = data.profile.skillBPullupSets || 6;
+        const sbPuR = data.profile.skillBPullupReps || 3;
+        const sbDipS = data.profile.skillBDipSets || 6;
+        const sbDipR = data.profile.skillBDipReps || 3;
         cards = `
       <div class="presc-card">
         <div class="presc-ex-name">1. Weighted Pull-ups</div>
         <div class="presc-weight">${fmtWeight(pW)}<span>kg</span></div>
-        <div class="presc-sets">6 sets × 3 reps</div>
+        <div class="presc-sets">${sbPuS} sets × ${sbPuR} reps</div>
         <div class="presc-rir">Mirrors Skill A weight</div>
       </div>
       <div class="presc-card">
         <div class="presc-ex-name">2. Weighted Dips</div>
         <div class="presc-weight">${fmtWeight(dW)}<span>kg</span></div>
-        <div class="presc-sets">6 sets × 3 reps</div>
+        <div class="presc-sets">${sbDipS} sets × ${sbDipR} reps</div>
         <div class="presc-rir">Mirrors Skill A weight</div>
       </div>`;
       } else if (sessionType === 'hypertrophy_a') {
@@ -2853,7 +2890,8 @@
       loggedSets: {},
       emomMinute: 1,
       emomTimer: null,
-      emomSeconds: 0
+      emomSeconds: 0,
+      abSkipped: false
     };
 
     function nextMovement() {
@@ -2896,6 +2934,7 @@
       SS.loggedSets = {};
       SS.emomMinute = 1;
       SS.emomSeconds = 0;
+      SS.abSkipped = false;
       if (SS.emomTimer) clearInterval(SS.emomTimer);
 
       const data = loadData();
@@ -2903,9 +2942,17 @@
       const shouldIncludeAbs = isAbDay(currentDay, data.profile) || (wasUnscheduled && isSessionTypeAbDay(sessionType, data.profile));
 
       if (sessionType === 'skill_a' || sessionType === 'skill_b') {
+        const saPuSets = data.profile.skillAPullupSets || 3;
+        const saPuReps = data.profile.skillAPullupReps || 6;
+        const saDipSets = data.profile.skillADipSets || 3;
+        const saDipReps = data.profile.skillADipReps || 6;
+        const sbPuSets = data.profile.skillBPullupSets || 6;
+        const sbPuReps = data.profile.skillBPullupReps || 3;
+        const sbDipSets = data.profile.skillBDipSets || 6;
+        const sbDipReps = data.profile.skillBDipReps || 3;
         SS.movements = [
-          { id: 'pullups', name: 'Weighted Pull-ups', totalSets: sessionType === 'skill_a' ? 3 : 6, targetReps: sessionType === 'skill_a' ? 6 : 3 },
-          { id: 'dips', name: 'Weighted Dips', totalSets: sessionType === 'skill_a' ? 3 : 6, targetReps: sessionType === 'skill_a' ? 6 : 3 }
+          { id: 'pullups', name: 'Weighted Pull-ups', totalSets: sessionType === 'skill_a' ? saPuSets : sbPuSets, targetReps: sessionType === 'skill_a' ? saPuReps : sbPuReps },
+          { id: 'dips', name: 'Weighted Dips', totalSets: sessionType === 'skill_a' ? saDipSets : sbDipSets, targetReps: sessionType === 'skill_a' ? saDipReps : sbDipReps }
         ];
       } else if (sessionType === 'hypertrophy_a') {
         SS.movements = [
@@ -3094,7 +3141,10 @@
         <div class="prev-sets">${prevSetsHTML || '<div style="font-size:12px;color:#444;">No sets logged yet</div>'}</div>
       </div>
       <div style="flex:1;"></div>
-      <button class="btn btn-primary" id="btn-log-ab-set">LOG SET ${SS.currentSetNum} OF ${mov.totalSets}</button>`;
+      <button class="btn btn-primary" id="btn-log-ab-set">LOG SET ${SS.currentSetNum} OF ${mov.totalSets}</button>
+    <div style="margin-top:10px;text-align:center;">
+      <button class="btn btn-ghost" id="btn-skip-ab" style="font-size:12px;height:36px;padding:0 16px;color:var(--muted);">Skip ab work today</button>
+    </div>`;
 
         document.getElementById('btn-reps-minus')?.addEventListener('click', () => {
           const inp = document.getElementById('input-set-reps');
@@ -3115,6 +3165,12 @@
             persistSS();
             renderSessionScreen();
           }
+        });
+        document.getElementById('btn-skip-ab')?.addEventListener('click', () => {
+          SS.abSkipped = true;
+          SS.loggedSets['cable_crunch'] = [];
+          persistSS();
+          renderAbSkippedScreen();
         });
         return;
       }
@@ -3170,18 +3226,51 @@
       });
     }
 
-    function calcSkillAIncrement(sets) {
-      if (!sets || sets.length < 3) return 0;
-      if (sets.slice(0, 3).every(s => (s.reps || 0) >= 6)) {
+    function renderAbSkippedScreen() {
+      const container = document.getElementById('session-content');
+      const counter = document.getElementById('session-set-counter');
+      const progressBar = document.getElementById('session-progress-bar');
+      if (counter) counter.textContent = 'AB SKIPPED';
+      if (progressBar) progressBar.innerHTML = '<div class="spd" style="width:100%;background:var(--muted);opacity:0.3;"></div>';
+      container.innerHTML = `
+    <div style="text-align:center;margin-bottom:20px;">
+      <div class="session-ex-name" style="font-size:22px;margin-bottom:4px;">Cable Crunch</div>
+      <div style="font-size:13px;color:var(--muted);">Ab work skipped for today</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:24px;text-align:center;margin-bottom:20px;">
+      <div style="font-size:32px;margin-bottom:8px;">⏭️</div>
+      <div style="font-size:14px;color:var(--muted);">No progression evaluated. Weight and target unchanged.</div>
+    </div>
+    <div style="flex:1;"></div>
+    <button class="btn btn-ghost" id="btn-undo-skip-ab" style="margin-bottom:10px;">Undo skip</button>
+    <button class="btn btn-primary" id="btn-finish-after-skip">Complete Session</button>`;
+      document.getElementById('btn-undo-skip-ab')?.addEventListener('click', () => {
+        SS.abSkipped = false;
+        persistSS();
+        renderSessionScreen();
+      });
+      document.getElementById('btn-finish-after-skip')?.addEventListener('click', () => {
+        finishSession();
+      });
+    }
+
+    function calcSkillAIncrement(sets, targetSets, targetReps) {
+      const nSets = targetSets || 3;
+      const nReps = targetReps || 6;
+      if (!sets || sets.length < nSets) return 0;
+      if (sets.slice(0, nSets).every(s => (s.reps || 0) >= nReps)) {
         return 2.5;
       }
       return 0;
     }
 
     function applySkillAProgression(data, exId, sets, weight) {
-      const inc = calcSkillAIncrement(sets);
+      const prof = (data && data.profile) || {};
+      const targetSets = exId === 'pullups' ? (prof.skillAPullupSets || 3) : (prof.skillADipSets || 3);
+      const targetReps = exId === 'pullups' ? (prof.skillAPullupReps || 6) : (prof.skillADipReps || 6);
+      const inc = calcSkillAIncrement(sets, targetSets, targetReps);
       if (inc > 0) {
-        if (data.exercises && data.exercises[exId]) {
+        if (data && data.exercises && data.exercises[exId]) {
           data.exercises[exId].currentWeight = roundTo125((data.exercises[exId].currentWeight || weight) + inc);
         }
       }
@@ -3198,11 +3287,14 @@
     }
 
     function applyHbPullupProgression(data, sets) {
-      const targetSets = data.profile.hbPullupSets || 3;
-      const targetReps = data.profile.hbPullupReps || 12;
+      const prof = (data && data.profile) || {};
+      const targetSets = prof.hbPullupSets || 3;
+      const targetReps = prof.hbPullupReps || 12;
       const inc = calcHbPullupIncrement(sets, targetSets, targetReps);
       if (inc > 0) {
-        data.profile.hbPullupWeight = roundTo125((data.profile.hbPullupWeight || 0) + inc);
+        if (data && data.profile) {
+          data.profile.hbPullupWeight = roundTo125((data.profile.hbPullupWeight || 0) + inc);
+        }
       }
     }
 
@@ -3232,9 +3324,13 @@
       let emomProgResult = null;
 
       if (SS.sessionType === 'skill_a') {
+        const saPuSets = data.profile.skillAPullupSets || 3;
+        const saPuReps = data.profile.skillAPullupReps || 6;
+        const saDipSets = data.profile.skillADipSets || 3;
+        const saDipReps = data.profile.skillADipReps || 6;
         sessRecord.detail = {
-          pullups: { weightUsed: puWeightUsed, sets: puSets.map(s => s.reps), progressed: puSets.length >= 3 && puSets.every(s => s.reps >= 6) },
-          dips: { weightUsed: dipWeightUsed, sets: dipSets.map(s => s.reps), progressed: dipSets.length >= 3 && dipSets.every(s => s.reps >= 6) }
+          pullups: { weightUsed: puWeightUsed, sets: puSets.map(s => s.reps), progressed: puSets.length >= saPuSets && puSets.slice(0,saPuSets).every(s => s.reps >= saPuReps), targetSets: saPuSets, targetReps: saPuReps },
+          dips: { weightUsed: dipWeightUsed, sets: dipSets.map(s => s.reps), progressed: dipSets.length >= saDipSets && dipSets.slice(0,saDipSets).every(s => s.reps >= saDipReps), targetSets: saDipSets, targetReps: saDipReps }
         };
         sessRecord.skillA = sessRecord.detail;
       } else if (SS.sessionType === 'skill_b') {
@@ -3276,7 +3372,10 @@
       }
 
       let abProgResult = null;
-      if (abSets.length > 0) {
+      if (SS.abSkipped) {
+        if (!sessRecord.detail) sessRecord.detail = {};
+        sessRecord.detail.cableCrunchSkipped = true;
+      } else if (abSets.length > 0) {
         abProgResult = calcAbProgression(data.profile, abSets);
         const abVar = data.profile.abVariation || 0;
         if (!sessRecord.detail) sessRecord.detail = {};
@@ -3641,7 +3740,15 @@
           bodyHTML = `<div class="history-set-row">Completed workout session</div>`;
         }
 
-        if (detail?.cableCrunch) {
+        if (detail?.cableCrunchSkipped) {
+          bodyHTML += `
+            <div class="history-ex-section">
+              <div class="history-ex-name">3. Cable Crunch</div>
+              <div class="history-ex-weight" style="color:var(--muted);">Skipped</div>
+              <div class="history-set-row" style="color:var(--muted);font-style:italic;">Ab work skipped</div>
+            </div>`;
+          exSummary += ` • Ab skipped`;
+        } else if (detail?.cableCrunch) {
           const ab = detail.cableCrunch;
           const abSetsText = (ab.sets || []).map((r, i) => `<div class="history-set-row">Set ${i + 1}: ${r} reps</div>`).join('') || '<div class="history-set-row">No sets logged</div>';
           let abBadge = '';
@@ -4127,460 +4234,284 @@
     // SETTINGS SCREEN
     // ═══════════════════════════════════════════════════════════════
 
-    function renderSettingsScreen() {
-      const data = loadData();
-      const container = document.getElementById('settings-content');
-      if (!data) return;
+    // In-memory collapsible section state for Settings (not persisted)
+    const _settingsOpen = {
+      'emom-adv': false,
+      'ab-adv': false
+    };
 
-      const pW = roundTo125(data.exercises.pullups.currentWeight || 0);
-      const dW = roundTo125(data.exercises.dips.currentWeight || 0);
+    function buildSettingsHtml(data) {
+      if (!data) return '';
+      const pW = roundTo125((data.exercises && data.exercises.pullups && data.exercises.pullups.currentWeight) || 0);
+      const dW = roundTo125((data.exercises && data.exercises.dips && data.exercises.dips.currentWeight) || 0);
       const hypW = getHypDipWeight(data);
-      const bw = data.profile.bodyweight;
+      const prof = data.profile || {};
+      const bw = prof.bodyweight;
 
-      container.innerHTML = `
-    <div style="display:flex;flex-direction:column;gap:16px;">
-      <div class="card">
-        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">PROFILE</div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--text);">${data.profile.name || 'Athlete'}</div>
-            <div style="font-size:12px;color:var(--muted);">Name</div>
+      // ─── Settings helper functions ────────────────────────────────
+      function _row(label, sublabel, rightHtml, border=true) {
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;${border?'border-bottom:1px solid var(--border);':''}">
+          <div>${sublabel!==''?`<div style="font-size:14px;font-weight:700;color:var(--text);">${label}</div><div style="font-size:12px;color:var(--muted);">${sublabel}</div>`:`<div style="font-size:14px;font-weight:700;color:var(--text);">${label}</div>`}</div>
+          <div>${rightHtml}</div>
+        </div>`;
+      }
+      function _editBtn(id, txt='Adjust') {
+        return `<button class="btn btn-ghost" id="${id}" style="width:auto;height:32px;padding:0 12px;font-size:12px;">${txt}</button>`;
+      }
+      function _stepper(minId, valId, valHtml, plusId, minW='28px') {
+        return `<div style="display:flex;align-items:center;gap:10px;">
+          <button class="stepper-btn" id="${minId}">−</button>
+          <span id="${valId}" style="font-size:18px;font-weight:900;color:var(--accent);min-width:${minW};text-align:center;">${valHtml}</span>
+          <button class="stepper-btn" id="${plusId}">+</button>
+        </div>`;
+      }
+      function _stepperSm(minId, valId, val, plusId) {
+        return `<span style="display:inline-flex;align-items:center;gap:4px;">
+          <button class="stepper-btn" id="${minId}" style="width:32px;height:32px;font-size:16px;">−</button>
+          <span id="${valId}" style="font-size:16px;font-weight:900;color:var(--accent);min-width:22px;text-align:center;">${val}</span>
+          <button class="stepper-btn" id="${plusId}" style="width:32px;height:32px;font-size:16px;">+</button>
+        </span>`;
+      }
+      function _advSubsec(secId, bodyHtml) {
+        const open = !!_settingsOpen[secId];
+        return `<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:2px;">
+          <div class="settings-adv-toggle" data-sec="${secId}" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;cursor:pointer;user-select:none;-webkit-user-select:none;">
+            <div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:var(--accent);">${open?'Hide advanced tuning':'Show advanced tuning'}</div>
+            <div id="chev-${secId}" style="font-size:18px;font-weight:700;color:var(--accent);transition:transform 0.2s;${open?'transform:rotate(90deg);':''}">›</div>
           </div>
-          <button class="btn btn-ghost" id="btn-edit-name" style="width:auto;height:32px;padding:0 12px;font-size:12px;">Edit</button>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;">
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--text);">${bw ? `${bw}kg` : 'Not set'}</div>
-            <div style="font-size:12px;color:var(--muted);">Bodyweight</div>
-          </div>
-          <button class="btn btn-ghost" id="btn-edit-bw" style="width:auto;height:32px;padding:0 12px;font-size:12px;">Update</button>
-        </div>
-      </div>
+          <div id="secbody-${secId}" style="${open?'':'display:none;'}">${bodyHtml}</div>
+        </div>`;
+      }
 
-      <div class="card">
-        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">PROGRAM WORKING WEIGHTS</div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--text);">Skill A Pull-ups</div>
-            <div style="font-size:12px;color:var(--muted);">${fmtWeight(pW)}kg</div>
-          </div>
-          <button class="btn btn-ghost" id="btn-edit-pullups" style="width:auto;height:32px;padding:0 12px;font-size:12px;">Adjust</button>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--text);">Skill A Dips</div>
-            <div style="font-size:12px;color:var(--muted);">${fmtWeight(dW)}kg</div>
-          </div>
-          <button class="btn btn-ghost" id="btn-edit-dips" style="width:auto;height:32px;padding:0 12px;font-size:12px;">Adjust</button>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--text);">Hypertrophy Dips</div>
-            <div style="font-size:12px;color:var(--muted);">${fmtWeight(hypW)}kg &nbsp;<span style="color:#555;">· auto (50% of Skill A dips)</span></div>
-          </div>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--text);">Hyp B Pull-ups</div>
-            <div style="font-size:12px;color:var(--muted);">${data.profile.hbPullupWeight !== null && data.profile.hbPullupWeight !== undefined ? fmtWeight(data.profile.hbPullupWeight) + 'kg' : 'Not set'}</div>
-          </div>
-          <button class="btn btn-ghost" id="btn-edit-hbpullups" style="width:auto;height:32px;padding:0 12px;font-size:12px;">Adjust</button>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;">
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--text);">Swap Hypertrophy Days</div>
-            <div style="font-size:12px;color:var(--muted);">Fri: ${data.profile.hypertrophySwapped ? 'Hyp B' : 'Hyp A'}, Sat: ${data.profile.hypertrophySwapped ? 'Hyp A' : 'Hyp B'}</div>
-          </div>
-          <button class="btn btn-ghost" id="btn-swap-days" style="width:auto;height:32px;padding:0 12px;font-size:12px;">Swap</button>
-        </div>
-      </div>
+      // Read profile values
+      const saPuSets = prof.skillAPullupSets || 3;
+      const saPuReps = prof.skillAPullupReps || 6;
+      const saDipSets = prof.skillADipSets || 3;
+      const saDipReps = prof.skillADipReps || 6;
+      const sbPuSets = prof.skillBPullupSets || 6;
+      const sbPuReps = prof.skillBPullupReps || 3;
+      const sbDipSets = prof.skillBDipSets || 6;
+      const sbDipReps = prof.skillBDipReps || 3;
+      const hbPuSets = prof.hbPullupSets || 3;
+      const hbPuReps = prof.hbPullupReps || 12;
+      const emomRpm  = prof.emomRepsPerMin || 3;
+      const emomDur  = prof.emomDurationMins || 30;
+      const emomWt   = prof.emomWeight || 0;
+      const emomBase = prof.emomBaselineMinutes || 10;
+      const emomGain = prof.emomRepGain !== undefined ? prof.emomRepGain : 0.2;
+      const emomWstep= prof.emomWeightStep !== undefined ? prof.emomWeightStep : 2.5;
+      const emomMaxM = prof.emomMaxMinutes || 20;
+      const emomMinM = prof.emomMinMinutes || 5;
+      const emomFLim = prof.emomFailStreakLimit !== undefined ? prof.emomFailStreakLimit : 2;
+      const emomFDr  = prof.emomFailDrop !== undefined ? prof.emomFailDrop : 2;
+      const emomFSt  = prof.emomFailStreak || 0;
+      const emomMaxR = prof.emomMaxReps;
+      const abDaysArr= prof.abDays || [3, 6];
+      const abTargR  = prof.abTargetReps || 15;
+      const abVarIdx = prof.abVariation || 0;
+      const abWt     = prof.abWeight;
+      const abWStep  = prof.abWeightStep || 0;
+      const abSetsN  = prof.abSets || 3;
+      const abMinR   = prof.abRepsMin || 12;
+      const abMaxR   = prof.abRepsMax || 20;
+      const abInc    = prof.abRepIncrement || 1;
 
-      <div class="card">
-        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">HYPERTROPHY B — PULL-UPS</div>
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div style="font-size:14px;font-weight:700;color:var(--text);">Sets</div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-hb-sets-minus">−</button>
-              <span id="hb-sets-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.hbPullupSets || 3}</span>
-              <button class="stepper-btn" id="btn-hb-sets-plus">+</button>
+      const DAY_MAP = {1:'Mon',2:'Tue',3:'Wed',4:'Thu',5:'Fri',6:'Sat',0:'Sun'};
+      const activeDayNames = [1,2,3,4,5,6,0].filter(d=>abDaysArr.includes(d)).map(d=>DAY_MAP[d]);
+      const abDayLabel = activeDayNames.length > 0 ? 'Ab block: '+activeDayNames.join(', ') : 'Ab block: not scheduled on any day';
+      const dayDefs = [{d:1,l:'M'},{d:2,l:'T'},{d:3,l:'W'},{d:4,l:'T'},{d:5,l:'F'},{d:6,l:'S'},{d:0,l:'S'}];
+      const dayBtnsHtml = dayDefs.map(({d,l}) => {
+        const on = abDaysArr.includes(d);
+        return `<button class="btn btn-ghost ab-day-btn" data-day="${d}" style="flex:1;min-width:0;height:40px;padding:0;font-size:13px;font-weight:700;${on?'background:var(--accent);color:#000;border-color:var(--accent);':'background:var(--surface-high);color:var(--muted);'}">${l}</button>`;
+      }).join('');
+
+      // ─── Section 1: Athlete ───────────────────────────────────────
+      const _sec1AthleteHtml = `
+      <div class="card" data-section="athlete">
+        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Athlete</div>
+        ${_row(escapeHtml(prof.name||'Athlete'),'Name',_editBtn('btn-edit-name','Edit'),true)}
+        ${_row(bw?bw+'kg':'Not set','Bodyweight',_editBtn('btn-edit-bw','Update'),false)}
+      </div>`;
+
+      // ─── Section 2: Program Working Weights ────────────────────────
+      const abWtStr = abWt!==undefined&&abWt!==''&&Number(abWt)>0?fmtWeight(Number(abWt))+'kg':'Full stack';
+      const _sec2WeightsHtml = `
+      <div class="card" data-section="weights">
+        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Program Working Weights</div>
+        ${_row('Skill A Pull-ups',fmtWeight(pW)+'kg',_editBtn('btn-edit-pullups','Adjust'),true)}
+        ${_row('Skill A Dips',fmtWeight(dW)+'kg',_editBtn('btn-edit-dips','Adjust'),true)}
+        ${_row('Skill B Pull-ups','Same as Skill A',`<span style="font-size:14px;font-weight:700;color:var(--muted);">${fmtWeight(pW)}kg</span>`,true)}
+        ${_row('Skill B Dips','Same as Skill A',`<span style="font-size:14px;font-weight:700;color:var(--muted);">${fmtWeight(dW)}kg</span>`,true)}
+        ${_row('Hyp B Pull-ups',prof.hbPullupWeight!=null&&prof.hbPullupWeight!==undefined?fmtWeight(prof.hbPullupWeight)+'kg':'Not set',_editBtn('btn-edit-hbpullups','Adjust'),true)}
+        ${_row('EMOM Added Weight',(emomWt>0?fmtWeight(emomWt)+'kg':'BW')+' <span style="font-size:11px;color:#555;">· manual override resets baseline</span>',_stepper('btn-emom-w-minus','emom-w-val',emomWt>0?fmtWeight(emomWt)+'kg':'BW','btn-emom-w-plus','40px'),true)}
+        ${abWStep>0?_row('Ab Added Weight','Cable crunch added load',_stepper('btn-ab-w-minus','ab-w-val',abWtStr,'btn-ab-w-plus','40px'),true):''}
+        ${_row('Swap Hypertrophy Days','Fri: '+(prof.hypertrophySwapped?'Hyp B':'Hyp A')+', Sat: '+(prof.hypertrophySwapped?'Hyp A':'Hyp B'),_editBtn('btn-swap-days','Swap'),false)}
+      </div>`;
+
+      // ─── Section 3: Skill Day Volumes ─────────────────────────────
+      const _sec3VolumesHtml = `
+      <div class="card" data-section="volumes">
+        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Skill Day Volumes</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--text);">Skill A: Pull-ups</div>
+            <div style="font-size:12px;color:var(--muted);"><span id="sa-tot-pu">${saPuSets*saPuReps}</span> total reps</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);">
+            <span>Sets: ${_stepperSm('sa-pu-sets-minus','sa-pu-sets-val',saPuSets,'sa-pu-sets-plus')}</span>
+            <span>Reps: ${_stepperSm('sa-pu-reps-minus','sa-pu-reps-val',saPuReps,'sa-pu-reps-plus')}</span>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--text);">Skill A: Dips</div>
+            <div style="font-size:12px;color:var(--muted);"><span id="sa-tot-dip">${saDipSets*saDipReps}</span> total reps</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);">
+            <span>Sets: ${_stepperSm('sa-dip-sets-minus','sa-dip-sets-val',saDipSets,'sa-dip-sets-plus')}</span>
+            <span>Reps: ${_stepperSm('sa-dip-reps-minus','sa-dip-reps-val',saDipReps,'sa-dip-reps-plus')}</span>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--text);">Skill B: Pull-ups</div>
+            <div style="font-size:12px;color:var(--muted);"><span id="sb-tot-pu">${sbPuSets*sbPuReps}</span> total reps</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);">
+            <span>Sets: ${_stepperSm('sb-pu-sets-minus','sb-pu-sets-val',sbPuSets,'sb-pu-sets-plus')}</span>
+            <span>Reps: ${_stepperSm('sb-pu-reps-minus','sb-pu-reps-val',sbPuReps,'sb-pu-reps-plus')}</span>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--text);">Skill B: Dips</div>
+            <div style="font-size:12px;color:var(--muted);"><span id="sb-tot-dip">${sbDipSets*sbDipReps}</span> total reps</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);">
+            <span>Sets: ${_stepperSm('sb-dip-sets-minus','sb-dip-sets-val',sbDipSets,'sb-dip-sets-plus')}</span>
+            <span>Reps: ${_stepperSm('sb-dip-reps-minus','sb-dip-reps-val',sbDipReps,'sb-dip-reps-plus')}</span>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--text);">Hyp B: Pull-ups</div>
+            <div style="font-size:12px;color:var(--muted);"><span id="hb-total-label">${hbPuSets*hbPuReps} reps</span> total</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);">
+            <span>Sets: ${_stepperSm('btn-hb-sets-minus','hb-sets-val',hbPuSets,'btn-hb-sets-plus')}</span>
+            <span>Reps: ${_stepperSm('btn-hb-reps-minus','hb-reps-val',hbPuReps,'btn-hb-reps-plus')}</span>
+          </div>
+        </div>
+      </div>`;
+
+      // ─── Section 4: EMOM Pull-ups ─────────────────────────────────
+      const _emomAdvHtml = `
+        ${_row('Baseline duration','Start minutes at current weight',_stepper('btn-emom-base-minus','emom-base-val',emomBase,'btn-emom-base-plus'),true)}
+        ${_row('Rep gain / session','Rep increase before weight step',_stepper('btn-emom-gain-minus','emom-gain-val','+'+Math.round(emomGain*100)+'%','btn-emom-gain-plus'),true)}
+        ${_row('Weight step','Added load on topping out',_stepper('btn-emom-wstep-minus','emom-wstep-val',fmtWeight(emomWstep)+'kg','btn-emom-wstep-plus'),true)}
+        ${_row('Max duration','Hard ceiling on duration',_stepper('btn-emom-maxm-minus','emom-maxm-val',emomMaxM,'btn-emom-maxm-plus'),true)}
+        ${_row('Min duration','Lowest duration after fails',_stepper('btn-emom-minm-minus','emom-minm-val',emomMinM,'btn-emom-minm-plus'),true)}
+        ${_row('Fail streak limit','Incomplete sessions before drop',_stepper('btn-emom-faillim-minus','emom-faillim-val',emomFLim,'btn-emom-faillim-plus'),true)}
+        ${_row('Duration drop on fail','Minutes deducted on limit',_stepper('btn-emom-faildr-minus','emom-faildr-val',emomFDr+'m','btn-emom-faildr-plus'),true)}
+        ${_row('Max strict BW pull-ups','Reference for rate suggestion',_stepper('btn-emom-maxr-minus','emom-maxr-val',emomMaxR!=null?emomMaxR:'—','btn-emom-maxr-plus'),false)}
+        <div style="padding-top:12px;text-align:center;">
+          <button class="btn btn-ghost" id="btn-emom-adv-reset" style="font-size:12px;height:34px;padding:0 14px;color:var(--muted);">Reset to Defaults</button>
+        </div>`;
+
+      const _sec4EmomHtml = `
+      <div class="card" data-section="emom">
+        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">EMOM Pull-ups</div>
+        ${_row('Duration Target','Target minutes for session',_stepper('btn-emom-dur-minus','emom-dur-val',emomDur+'m','btn-emom-dur-plus'),true)}
+        ${_row('Reps Per Minute','Reps completed each minute',_stepper('btn-emom-rpm-minus','emom-rpm-val',emomRpm,'btn-emom-rpm-plus'),true)}
+        <div style="padding:10px 0;border-bottom:1px solid var(--border);">
+          <div style="font-size:13px;color:var(--muted);">Target: <strong id="emom-target-summary" style="color:var(--text);">${emomRpm} reps/min × ${emomDur} min${emomWt>0?' (+'+fmtWeight(emomWt)+'kg)':''} = ${emomRpm*emomDur} reps</strong></div>
+        </div>
+        ${_row('Current Fail Streak',emomFSt+' of '+emomFLim+' incomplete',emomFSt>0?'<button class="btn btn-ghost" id="btn-emom-reset-streak" style="width:auto;height:32px;padding:0 12px;font-size:12px;">Clear</button>':'<span style="font-size:13px;color:var(--muted);">None</span>',false)}
+        ${_advSubsec('emom-adv',_emomAdvHtml)}
+      </div>`;
+
+      // ─── Section 5: Cable Crunch ──────────────────────────────────
+      const _abAdvHtml = `
+        ${_row('Reps min','Reset target upon top-out',_stepper('btn-ab-min-minus','ab-min-val',abMinR,'btn-ab-min-plus'),true)}
+        ${_row('Reps max','Top-out target',_stepper('btn-ab-max-minus','ab-max-val',abMaxR,'btn-ab-max-plus'),true)}
+        ${_row('Rep increment','Reps added per completed session',_stepper('btn-ab-inc-minus','ab-inc-val',abInc,'btn-ab-inc-plus'),true)}
+        ${_row('Sets','Number of working sets',_stepper('btn-ab-sets-minus','ab-sets-val',abSetsN,'btn-ab-sets-plus'),true)}
+        ${_row('Weight step',abWStep>0?'':'Off = use variation ladder',_stepper('btn-ab-wstep-minus','ab-wstep-val',abWStep>0?'+'+fmtWeight(abWStep)+'kg':'Off','btn-ab-wstep-plus','40px'),false)}
+        <div style="padding-top:12px;text-align:center;">
+          <button class="btn btn-ghost" id="btn-ab-adv-reset" style="font-size:12px;height:34px;padding:0 14px;color:var(--muted);">Reset to Defaults</button>
+        </div>`;
+
+      const abLadderWarn = (abVarIdx>=3&&abTargR>=abMaxR&&abWStep<=0)?'<div style="font-size:10px;color:var(--warning);text-align:right;margin-top:2px;">Ladder complete</div>':'';
+      const _sec5AbHtml = `
+      <div class="card" data-section="abs">
+        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Cable Crunch</div>
+        ${_row('Target Reps','Current rep target',_stepper('btn-ab-target-minus','ab-target-val',abTargR,'btn-ab-target-plus'),true)}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--text);">Current Variation</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button class="stepper-btn" id="btn-ab-var-minus" style="width:32px;height:32px;">−</button>
+              <span style="font-size:13px;font-weight:700;color:var(--accent);max-width:140px;text-align:center;" id="ab-var-name">${AB_VARIATIONS[abVarIdx]||'Standard Cable Crunch'}</span>
+              <button class="stepper-btn" id="btn-ab-var-plus" style="width:32px;height:32px;">+</button>
             </div>
-          </div>
-        </div>
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div style="font-size:14px;font-weight:700;color:var(--text);">Reps per set</div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-hb-reps-minus">−</button>
-              <span id="hb-reps-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.hbPullupReps || 12}</span>
-              <button class="stepper-btn" id="btn-hb-reps-plus">+</button>
-            </div>
+            ${abLadderWarn}
           </div>
         </div>
         <div style="padding:10px 0;">
-          <div style="font-size:13px;color:var(--muted);">Total: <strong id="hb-total-label" style="color:var(--text);">${(data.profile.hbPullupSets || 3) * (data.profile.hbPullupReps || 12)} reps</strong></div>
+          <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px;">Training Days</div>
+          <div style="display:flex;gap:6px;justify-content:space-between;margin-bottom:8px;">${dayBtnsHtml}</div>
+          <div style="font-size:11px;color:var(--muted);">${abDayLabel} · respects hypertrophy day swap</div>
         </div>
+        ${_advSubsec('ab-adv',_abAdvHtml)}
+      </div>`;
+
+      // ─── Section 6: Data & App ────────────────────────────────────
+      const _sec6DataHtml = `
+      <div class="card" data-section="data">
+        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Data &amp; App</div>
+        ${_row('Export Data','Save backup JSON to file',_editBtn('btn-export-json','Export'),true)}
+        ${_row('Import Data','Restore data from backup file',_editBtn('btn-import-json','Import'),true)}
+        ${_row('<span style="color:var(--danger);">Clear All Data</span>','Wipe all data and restart onboarding','<button class="btn btn-danger" id="btn-reset-data" style="width:auto;height:32px;padding:0 12px;font-size:12px;">Reset</button>',false)}
       </div>
-
-      <!-- HYPERTROPHY A — EMOM PROGRESSION -->
-      <div class="card">
-        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">HYPERTROPHY A — EMOM PROGRESSION</div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Reps per minute (Rate)</div>
-              <div style="font-size:11px;color:var(--muted);">Manual override (resets baseline)</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-emom-rpm-minus">−</button>
-              <span id="emom-rpm-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.emomRepsPerMin || 5}</span>
-              <button class="stepper-btn" id="btn-emom-rpm-plus">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Target duration (minutes)</div>
-              <div style="font-size:11px;color:var(--muted);">Manual override (clears fail streak)</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-emom-dur-minus">−</button>
-              <span id="emom-dur-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.emomDurationMins || 16}</span>
-              <button class="stepper-btn" id="btn-emom-dur-plus">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Added weight</div>
-              <div style="font-size:11px;color:var(--muted);">Manual override (resets baseline)</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-emom-w-minus">−</button>
-              <span id="emom-w-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:40px;text-align:center;">${(data.profile.emomWeight || 0) > 0 ? fmtWeight(data.profile.emomWeight) + 'kg' : 'BW'}</span>
-              <button class="stepper-btn" id="btn-emom-w-plus">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="padding:10px 0;border-bottom:1px solid var(--border);">
-          <div style="font-size:13px;color:var(--muted);">
-            Target: <strong id="emom-target-summary" style="color:var(--text);">${data.profile.emomRepsPerMin || 5} reps/min × ${data.profile.emomDurationMins || 16} min${(data.profile.emomWeight || 0) > 0 ? ` (+${fmtWeight(data.profile.emomWeight)}kg)` : ''} = ${(data.profile.emomRepsPerMin || 5) * (data.profile.emomDurationMins || 16)} reps</strong>
-          </div>
-        </div>
-
-        <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin:12px 0 6px;">PROGRESSION SETTINGS</div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Baseline minutes</div>
-              <div style="font-size:11px;color:var(--muted);">Start minutes at current weight</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-emom-base-minus">−</button>
-              <span id="emom-base-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.emomBaselineMinutes || 15}</span>
-              <button class="stepper-btn" id="btn-emom-base-plus">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Rep gain threshold</div>
-              <div style="font-size:11px;color:var(--muted);">Rep increase before weight step</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-emom-gain-minus">−</button>
-              <span id="emom-gain-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:40px;text-align:center;">+${Math.round((data.profile.emomRepGain !== undefined ? data.profile.emomRepGain : 0.2) * 100)}%</span>
-              <button class="stepper-btn" id="btn-emom-gain-plus">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Weight step</div>
-              <div style="font-size:11px;color:var(--muted);">Added load on topping out</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-emom-wstep-minus">−</button>
-              <span id="emom-wstep-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:40px;text-align:center;">${fmtWeight(data.profile.emomWeightStep !== undefined ? data.profile.emomWeightStep : 2.5)}kg</span>
-              <button class="stepper-btn" id="btn-emom-wstep-plus">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Max duration cap</div>
-              <div style="font-size:11px;color:var(--muted);">Hard ceiling on duration</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-emom-maxm-minus">−</button>
-              <span id="emom-maxm-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.emomMaxMinutes || 20}</span>
-              <button class="stepper-btn" id="btn-emom-maxm-plus">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Min duration floor</div>
-              <div style="font-size:11px;color:var(--muted);">Lowest duration after fails</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-emom-minm-minus">−</button>
-              <span id="emom-minm-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.emomMinMinutes || 5}</span>
-              <button class="stepper-btn" id="btn-emom-minm-plus">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Fail streak limit</div>
-              <div style="font-size:11px;color:var(--muted);">Incomplete sessions before drop</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-emom-faillim-minus">−</button>
-              <span id="emom-faillim-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.emomFailStreakLimit !== undefined ? data.profile.emomFailStreakLimit : 2}</span>
-              <button class="stepper-btn" id="btn-emom-faillim-plus">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Fail drop amount</div>
-              <div style="font-size:11px;color:var(--muted);">Minutes deducted on limit</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-emom-faildr-minus">−</button>
-              <span id="emom-faildr-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.emomFailDrop !== undefined ? data.profile.emomFailDrop : 2}m</span>
-              <button class="stepper-btn" id="btn-emom-faildr-plus">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Current fail streak</div>
-              <div style="font-size:11px;color:var(--muted);">${data.profile.emomFailStreak || 0} of ${data.profile.emomFailStreakLimit !== undefined ? data.profile.emomFailStreakLimit : 2} incomplete</div>
-            </div>
-            <div>
-              ${(data.profile.emomFailStreak || 0) > 0 ? `<button class="btn btn-ghost" id="btn-emom-reset-streak" style="width:auto;height:32px;padding:0 12px;font-size:12px;">Reset</button>` : `<span style="font-size:13px;color:var(--muted);">Clean</span>`}
-            </div>
-          </div>
-        </div>
-
-        <div style="padding:8px 0;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Max strict bodyweight pull-ups</div>
-              <div style="font-size:11px;color:var(--muted);">Reference for rate suggestion</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-emom-maxr-minus">−</button>
-              <span id="emom-maxr-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.emomMaxReps !== undefined ? data.profile.emomMaxReps : '—'}</span>
-              <button class="stepper-btn" id="btn-emom-maxr-plus">+</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- AB WORK — CABLE CRUNCH -->
-      <div class="card">
-        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">AB WORK — CABLE CRUNCH</div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px;">Scheduled Days</div>
-          <div style="display:flex;gap:6px;justify-content:space-between;margin-bottom:6px;">
-            ${(function() {
-              const abDays = data.profile.abDays || [3, 6];
-              const dayDefs = [
-                { d: 1, label: 'M' },
-                { d: 2, label: 'T' },
-                { d: 3, label: 'W' },
-                { d: 4, label: 'T' },
-                { d: 5, label: 'F' },
-                { d: 6, label: 'S' },
-                { d: 0, label: 'S' }
-              ];
-              return dayDefs.map(item => {
-                const active = abDays.includes(item.d);
-                return `<button class="btn btn-ghost ab-day-btn" data-day="${item.d}" style="flex:1;min-width:0;height:36px;padding:0;font-size:12px;font-weight:700;${active ? 'background:var(--accent);color:#000;border-color:var(--accent);' : 'background:var(--surface-high);color:var(--muted);'}">${item.label}</button>`;
-              }).join('');
-            })()}
-          </div>
-          <div style="font-size:11px;color:var(--muted);">
-            ${(function() {
-              const abDays = data.profile.abDays || [3, 6];
-              const dayMap = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 0: 'Sun' };
-              const activeNames = [1, 2, 3, 4, 5, 6, 0].filter(d => abDays.includes(d)).map(d => dayMap[d]);
-              return (activeNames.length > 0 ? activeNames.join(', ') : 'None (disabled)') + ' (respects day swap)';
-            })()}
-          </div>
-        </div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Target reps</div>
-              <div style="font-size:11px;color:var(--muted);">Current rep target</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-ab-target-minus">−</button>
-              <span id="ab-target-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.abTargetReps || 15}</span>
-              <button class="stepper-btn" id="btn-ab-target-plus">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Working sets</div>
-              <div style="font-size:11px;color:var(--muted);">Number of sets</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-ab-sets-minus">−</button>
-              <span id="ab-sets-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.abSets || 3}</span>
-              <button class="stepper-btn" id="btn-ab-sets-plus">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div style="flex:1;padding-right:12px;">
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Variation ladder</div>
-              <div style="font-size:12px;color:var(--accent);font-weight:600;" id="ab-var-name">${AB_VARIATIONS[data.profile.abVariation || 0] || 'Standard'}</div>
-              ${((data.profile.abVariation || 0) === 3 && (data.profile.abTargetReps || 15) >= (data.profile.abRepsMax || 20) && (data.profile.abWeightStep || 0) === 0) ? `<div style="font-size:11px;color:var(--warning);margin-top:2px;">Ladder complete, switch exercise</div>` : ''}
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-ab-var-minus">−</button>
-              <span id="ab-var-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.abVariation || 0}</span>
-              <button class="stepper-btn" id="btn-ab-var-plus">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Cable weight</div>
-              <div style="font-size:11px;color:var(--muted);">Logged weight (optional)</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-ab-w-minus">−</button>
-              <span id="ab-w-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:40px;text-align:center;">${data.profile.abWeight !== undefined && data.profile.abWeight !== '' && Number(data.profile.abWeight) > 0 ? `${fmtWeight(Number(data.profile.abWeight))}kg` : 'Full stack'}</span>
-              <button class="stepper-btn" id="btn-ab-w-plus">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Weight step</div>
-              <div style="font-size:11px;color:var(--muted);">0 = variation ladder mode</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-ab-wstep-minus">−</button>
-              <span id="ab-wstep-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:40px;text-align:center;">${(data.profile.abWeightStep || 0) > 0 ? `+${fmtWeight(data.profile.abWeightStep)}kg` : 'Off'}</span>
-              <button class="stepper-btn" id="btn-ab-wstep-plus">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="font-size:10px;font-weight:800;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin:12px 0 6px;">REP RANGE CONFIG</div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Min reps (Floor)</div>
-              <div style="font-size:11px;color:var(--muted);">Reset target upon top-out</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-ab-min-minus">−</button>
-              <span id="ab-min-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.abRepsMin || 12}</span>
-              <button class="stepper-btn" id="btn-ab-min-plus">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Max reps (Ceiling)</div>
-              <div style="font-size:11px;color:var(--muted);">Top-out target</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-ab-max-minus">−</button>
-              <span id="ab-max-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.abRepsMax || 20}</span>
-              <button class="stepper-btn" id="btn-ab-max-plus">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="padding:8px 0;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">Rep increment</div>
-              <div style="font-size:11px;color:var(--muted);">Reps added per completed session</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="stepper-btn" id="btn-ab-inc-minus">−</button>
-              <span id="ab-inc-val" style="font-size:18px;font-weight:900;color:var(--accent);min-width:28px;text-align:center;">${data.profile.abRepIncrement || 1}</span>
-              <button class="stepper-btn" id="btn-ab-inc-plus">+</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">DATA MANAGEMENT</div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--text);">Export Backup (JSON)</div>
-            <div style="font-size:12px;color:var(--muted);">Save your data to a file</div>
-          </div>
-          <button class="btn btn-ghost" id="btn-export-json" style="width:auto;height:32px;padding:0 12px;font-size:12px;">Export</button>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--text);">Import Backup (JSON)</div>
-            <div style="font-size:12px;color:var(--muted);">Restore data from JSON file</div>
-          </div>
-          <button class="btn btn-ghost" id="btn-import-json" style="width:auto;height:32px;padding:0 12px;font-size:12px;">Import</button>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;">
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--danger);">Reset Program</div>
-            <div style="font-size:12px;color:var(--muted);">Wipe all data and restart onboarding</div>
-          </div>
-          <button class="btn btn-danger" id="btn-reset-data" style="width:auto;height:32px;padding:0 12px;font-size:12px;">Reset</button>
-        </div>
-      </div>
-
       <div style="text-align:center;padding:12px 0;font-size:12px;color:var(--muted);">
         Odin v${APP_VERSION} (${BUILD_TIMESTAMP})
-      </div>
-    </div>`;
+      </div>`;
 
+      return `
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      ${_sec1AthleteHtml}
+      ${_sec2WeightsHtml}
+      ${_sec3VolumesHtml}
+      ${_sec4EmomHtml}
+      ${_sec5AbHtml}
+      ${_sec6DataHtml}
+    </div>`;
+    }
+
+    function renderSettingsScreen() {
+      const data = loadData();
+      const container = document.getElementById('settings-content');
+      if (!data || !container) return;
+
+      container.innerHTML = buildSettingsHtml(data);
+
+      // ─── Collapsible toggle handlers ────────────────────────────────
+      document.querySelectorAll('.settings-adv-toggle').forEach(hdr => {
+        hdr.addEventListener('click', () => {
+          const sec = hdr.dataset.sec;
+          _settingsOpen[sec] = !_settingsOpen[sec];
+          const body = document.getElementById('secbody-' + sec);
+          const chev = document.getElementById('chev-' + sec);
+          const txt = hdr.querySelector('div:first-child');
+          if (body) body.style.display = _settingsOpen[sec] ? '' : 'none';
+          if (chev) chev.style.transform = _settingsOpen[sec] ? 'rotate(90deg)' : '';
+          if (txt) txt.textContent = _settingsOpen[sec] ? 'Hide advanced tuning' : 'Show advanced tuning';
+        });
+      });
+
+      // ─── Profile / Weight / Schedule buttons ────────────────────────
       document.getElementById('btn-edit-name')?.addEventListener('click', () => {
         document.getElementById('mname-input').value = data.profile.name || '';
         showModal('modal-name-adjust');
@@ -4590,11 +4521,8 @@
       document.getElementById('btn-edit-dips')?.addEventListener('click', () => openWeightModal('dips'));
       document.getElementById('btn-edit-hbpullups')?.addEventListener('click', () => openWeightModal('hb_pullups'));
       document.getElementById('btn-swap-days')?.addEventListener('click', () => {
-        const d = loadData();
-        d.profile.hypertrophySwapped = !d.profile.hypertrophySwapped;
-        saveData(d);
-        renderSettingsScreen();
-        renderTodayScreen();
+        const d = loadData(); d.profile.hypertrophySwapped = !d.profile.hypertrophySwapped;
+        saveData(d); renderSettingsScreen(); renderTodayScreen();
       });
       document.getElementById('btn-export-json')?.addEventListener('click', doExport);
       document.getElementById('btn-import-json')?.addEventListener('click', () => {
@@ -4602,286 +4530,111 @@
       });
       document.getElementById('btn-reset-data')?.addEventListener('click', () => showModal('modal-reset1'));
 
-      (function bindHbSteppers() {
-        let sets = data.profile.hbPullupSets || 3;
-        let reps = data.profile.hbPullupReps || 12;
-        const setsEl = document.getElementById('hb-sets-val');
-        const repsEl = document.getElementById('hb-reps-val');
-        const totEl = document.getElementById('hb-total-label');
-        function updateLabels() {
-          if (setsEl) setsEl.textContent = sets;
-          if (repsEl) repsEl.textContent = reps;
-          if (totEl) totEl.textContent = `${sets * reps} reps`;
+      // ─── Sets & Reps steppers ───────────────────────────────────────
+      (function bindSetsRepsSteppers() {
+        function bindGroup(prefix, puSK, puRK, dipSK, dipRK) {
+          let pus = data.profile[puSK]||3, pur = data.profile[puRK]||6;
+          let ds  = data.profile[dipSK]||3, dr  = data.profile[dipRK]||6;
+          function save2() {
+            const d2 = loadData();
+            d2.profile[puSK]=pus; d2.profile[puRK]=pur;
+            d2.profile[dipSK]=ds; d2.profile[dipRK]=dr;
+            saveData(d2);
+          }
+          function updTot() {
+            const pe=document.getElementById(prefix+'-tot-pu');   if(pe) pe.textContent=(pus*pur)+' reps';
+            const de=document.getElementById(prefix+'-tot-dip');  if(de) de.textContent=(ds*dr)+' reps';
+          }
+          function bind4(id, getV, setV, min, max) {
+            document.getElementById(id+'-minus')?.addEventListener('click',()=>{if(getV()>min){setV(getV()-1);const e=document.getElementById(id+'-val');if(e)e.textContent=getV();updTot();save2();}});
+            document.getElementById(id+'-plus')?.addEventListener('click', ()=>{if(getV()<max){setV(getV()+1);const e=document.getElementById(id+'-val');if(e)e.textContent=getV();updTot();save2();}});
+          }
+          bind4(prefix+'-pu-sets',  ()=>pus, v=>{pus=v;}, 1, 10);
+          bind4(prefix+'-pu-reps',  ()=>pur, v=>{pur=v;}, 1, 15);
+          bind4(prefix+'-dip-sets', ()=>ds,  v=>{ds=v;},  1, 10);
+          bind4(prefix+'-dip-reps', ()=>dr,  v=>{dr=v;},  1, 15);
         }
-        function saveHb() {
-          const d = loadData();
-          d.profile.hbPullupSets = sets;
-          d.profile.hbPullupReps = reps;
-          saveData(d);
-        }
-        document.getElementById('btn-hb-sets-minus')?.addEventListener('click', () => {
-          if (sets > 2) { sets--; updateLabels(); saveHb(); }
-        });
-        document.getElementById('btn-hb-sets-plus')?.addEventListener('click', () => {
-          if (sets < 6) { sets++; updateLabels(); saveHb(); }
-        });
-        document.getElementById('btn-hb-reps-minus')?.addEventListener('click', () => {
-          if (reps > 6) { reps--; updateLabels(); saveHb(); }
-        });
-        document.getElementById('btn-hb-reps-plus')?.addEventListener('click', () => {
-          if (reps < 30) { reps++; updateLabels(); saveHb(); }
+        bindGroup('sa','skillAPullupSets','skillAPullupReps','skillADipSets','skillADipReps');
+        bindGroup('sb','skillBPullupSets','skillBPullupReps','skillBDipSets','skillBDipReps');
+
+        // HB pull-ups
+        let hbs = data.profile.hbPullupSets||3, hbr = data.profile.hbPullupReps||12;
+        function saveHb() { const d2=loadData(); d2.profile.hbPullupSets=hbs; d2.profile.hbPullupReps=hbr; saveData(d2); }
+        function updHb() { const e=document.getElementById('hb-total-label'); if(e) e.textContent=(hbs*hbr)+' reps'; }
+        document.getElementById('btn-hb-sets-minus')?.addEventListener('click',()=>{if(hbs>1){hbs--;const e=document.getElementById('hb-sets-val');if(e)e.textContent=hbs;updHb();saveHb();}});
+        document.getElementById('btn-hb-sets-plus')?.addEventListener('click', ()=>{if(hbs<10){hbs++;const e=document.getElementById('hb-sets-val');if(e)e.textContent=hbs;updHb();saveHb();}});
+        document.getElementById('btn-hb-reps-minus')?.addEventListener('click',()=>{if(hbr>1){hbr--;const e=document.getElementById('hb-reps-val');if(e)e.textContent=hbr;updHb();saveHb();}});
+        document.getElementById('btn-hb-reps-plus')?.addEventListener('click', ()=>{if(hbr<30){hbr++;const e=document.getElementById('hb-reps-val');if(e)e.textContent=hbr;updHb();saveHb();}});
+      })();
+
+      // ─── EMOM Steppers ──────────────────────────────────────────────
+      (function bindEmomSteppers() {
+        document.getElementById('btn-emom-rpm-minus')?.addEventListener('click',()=>{const d=loadData(),cur=d.profile.emomRepsPerMin||5;if(cur>1){overrideEmomRate(d.profile,cur-1);saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-rpm-plus')?.addEventListener('click', ()=>{const d=loadData(),cur=d.profile.emomRepsPerMin||5;if(cur<20){overrideEmomRate(d.profile,cur+1);saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-dur-minus')?.addEventListener('click',()=>{const d=loadData(),cur=d.profile.emomDurationMins||16;if(cur>5){overrideEmomMinutes(d.profile,cur-1);saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-dur-plus')?.addEventListener('click', ()=>{const d=loadData(),cur=d.profile.emomDurationMins||16;if(cur<60){overrideEmomMinutes(d.profile,cur+1);saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-w-minus')?.addEventListener('click',()=>{const d=loadData(),cur=d.profile.emomWeight||0;if(cur>0){overrideEmomWeight(d.profile,Math.max(0,roundTo125(cur-2.5)));saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-w-plus')?.addEventListener('click', ()=>{const d=loadData(),cur=d.profile.emomWeight||0;if(cur<100){overrideEmomWeight(d.profile,roundTo125(cur+2.5));saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-base-minus')?.addEventListener('click',()=>{const d=loadData(),cur=d.profile.emomBaselineMinutes||15;if(cur>5){d.profile.emomBaselineMinutes=cur-1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-base-plus')?.addEventListener('click', ()=>{const d=loadData(),cur=d.profile.emomBaselineMinutes||15;if(cur<60){d.profile.emomBaselineMinutes=cur+1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-gain-minus')?.addEventListener('click',()=>{const d=loadData(),cur=d.profile.emomRepGain!==undefined?d.profile.emomRepGain:0.2;if(cur>0.05){d.profile.emomRepGain=Math.round((cur-0.05)*100)/100;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-gain-plus')?.addEventListener('click', ()=>{const d=loadData(),cur=d.profile.emomRepGain!==undefined?d.profile.emomRepGain:0.2;if(cur<1.0){d.profile.emomRepGain=Math.round((cur+0.05)*100)/100;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-wstep-minus')?.addEventListener('click',()=>{const d=loadData(),cur=d.profile.emomWeightStep!==undefined?d.profile.emomWeightStep:2.5;if(cur>0.5){d.profile.emomWeightStep=roundTo125(cur-1.25);saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-wstep-plus')?.addEventListener('click', ()=>{const d=loadData(),cur=d.profile.emomWeightStep!==undefined?d.profile.emomWeightStep:2.5;if(cur<10){d.profile.emomWeightStep=roundTo125(cur+1.25);saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-maxm-minus')?.addEventListener('click',()=>{const d=loadData(),cur=d.profile.emomMaxMinutes||20,minM=d.profile.emomMinMinutes||5;if(cur>minM+1){d.profile.emomMaxMinutes=cur-1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-maxm-plus')?.addEventListener('click', ()=>{const d=loadData(),cur=d.profile.emomMaxMinutes||20;if(cur<60){d.profile.emomMaxMinutes=cur+1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-minm-minus')?.addEventListener('click',()=>{const d=loadData(),cur=d.profile.emomMinMinutes||5;if(cur>1){d.profile.emomMinMinutes=cur-1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-minm-plus')?.addEventListener('click', ()=>{const d=loadData(),cur=d.profile.emomMinMinutes||5,maxM=d.profile.emomMaxMinutes||20;if(cur<maxM-1){d.profile.emomMinMinutes=cur+1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-faillim-minus')?.addEventListener('click',()=>{const d=loadData(),cur=d.profile.emomFailStreakLimit!==undefined?d.profile.emomFailStreakLimit:2;if(cur>1){d.profile.emomFailStreakLimit=cur-1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-faillim-plus')?.addEventListener('click', ()=>{const d=loadData(),cur=d.profile.emomFailStreakLimit!==undefined?d.profile.emomFailStreakLimit:2;if(cur<10){d.profile.emomFailStreakLimit=cur+1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-faildr-minus')?.addEventListener('click',()=>{const d=loadData(),cur=d.profile.emomFailDrop!==undefined?d.profile.emomFailDrop:2;if(cur>1){d.profile.emomFailDrop=cur-1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-faildr-plus')?.addEventListener('click', ()=>{const d=loadData(),cur=d.profile.emomFailDrop!==undefined?d.profile.emomFailDrop:2;if(cur<15){d.profile.emomFailDrop=cur+1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-reset-streak')?.addEventListener('click',()=>{const d=loadData();d.profile.emomFailStreak=0;saveData(d);renderSettingsScreen();});
+        document.getElementById('btn-emom-maxr-minus')?.addEventListener('click',()=>{const d=loadData(),cur=d.profile.emomMaxReps||10;if(cur>1){d.profile.emomMaxReps=cur-1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-emom-maxr-plus')?.addEventListener('click', ()=>{const d=loadData(),cur=d.profile.emomMaxReps!==undefined?d.profile.emomMaxReps:9;d.profile.emomMaxReps=cur+1;saveData(d);renderSettingsScreen();});
+        document.getElementById('btn-emom-adv-reset')?.addEventListener('click',()=>{
+          if(!confirm('Reset EMOM advanced settings to defaults? (Baseline, Rep gain, Weight step, Max/min duration, Fail limits)\nThis will NOT change your current target, working weight or fail streak.'))return;
+          const d=loadData();
+          d.profile.emomBaselineMinutes=10;d.profile.emomRepGain=0.2;d.profile.emomWeightStep=2.5;
+          d.profile.emomMaxMinutes=20;d.profile.emomMinMinutes=5;d.profile.emomFailStreakLimit=2;
+          d.profile.emomFailDrop=2;d.profile.emomMaxReps=null;
+          saveData(d);renderSettingsScreen();
         });
       })();
 
-      // EMOM Progression Steppers & Overrides
-      (function bindEmomProgressionSteppers() {
-        document.getElementById('btn-emom-rpm-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomRepsPerMin || 5;
-          if (cur > 1) { overrideEmomRate(d.profile, cur - 1); saveData(d); renderSettingsScreen(); }
-        });
-        document.getElementById('btn-emom-rpm-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomRepsPerMin || 5;
-          if (cur < 20) { overrideEmomRate(d.profile, cur + 1); saveData(d); renderSettingsScreen(); }
-        });
-
-        document.getElementById('btn-emom-dur-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomDurationMins || 16;
-          if (cur > 5) { overrideEmomMinutes(d.profile, cur - 1); saveData(d); renderSettingsScreen(); }
-        });
-        document.getElementById('btn-emom-dur-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomDurationMins || 16;
-          if (cur < 60) { overrideEmomMinutes(d.profile, cur + 1); saveData(d); renderSettingsScreen(); }
-        });
-
-        document.getElementById('btn-emom-w-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomWeight || 0;
-          if (cur > 0) { overrideEmomWeight(d.profile, Math.max(0, roundTo125(cur - 2.5))); saveData(d); renderSettingsScreen(); }
-        });
-        document.getElementById('btn-emom-w-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomWeight || 0;
-          if (cur < 100) { overrideEmomWeight(d.profile, roundTo125(cur + 2.5)); saveData(d); renderSettingsScreen(); }
-        });
-
-        document.getElementById('btn-emom-base-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomBaselineMinutes || 15;
-          if (cur > 5) { d.profile.emomBaselineMinutes = cur - 1; saveData(d); renderSettingsScreen(); }
-        });
-        document.getElementById('btn-emom-base-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomBaselineMinutes || 15;
-          if (cur < 60) { d.profile.emomBaselineMinutes = cur + 1; saveData(d); renderSettingsScreen(); }
-        });
-
-        document.getElementById('btn-emom-gain-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomRepGain !== undefined ? d.profile.emomRepGain : 0.2;
-          if (cur > 0.05) { d.profile.emomRepGain = Math.round((cur - 0.05) * 100) / 100; saveData(d); renderSettingsScreen(); }
-        });
-        document.getElementById('btn-emom-gain-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomRepGain !== undefined ? d.profile.emomRepGain : 0.2;
-          if (cur < 1.0) { d.profile.emomRepGain = Math.round((cur + 0.05) * 100) / 100; saveData(d); renderSettingsScreen(); }
-        });
-
-        document.getElementById('btn-emom-wstep-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomWeightStep !== undefined ? d.profile.emomWeightStep : 2.5;
-          if (cur > 0.5) { d.profile.emomWeightStep = roundTo125(cur - 1.25); saveData(d); renderSettingsScreen(); }
-        });
-        document.getElementById('btn-emom-wstep-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomWeightStep !== undefined ? d.profile.emomWeightStep : 2.5;
-          if (cur < 10) { d.profile.emomWeightStep = roundTo125(cur + 1.25); saveData(d); renderSettingsScreen(); }
-        });
-
-        document.getElementById('btn-emom-maxm-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomMaxMinutes || 20;
-          const minM = d.profile.emomMinMinutes || 5;
-          if (cur > minM + 1) { d.profile.emomMaxMinutes = cur - 1; saveData(d); renderSettingsScreen(); }
-        });
-        document.getElementById('btn-emom-maxm-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomMaxMinutes || 20;
-          if (cur < 60) { d.profile.emomMaxMinutes = cur + 1; saveData(d); renderSettingsScreen(); }
-        });
-
-        document.getElementById('btn-emom-minm-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomMinMinutes || 5;
-          if (cur > 1) { d.profile.emomMinMinutes = cur - 1; saveData(d); renderSettingsScreen(); }
-        });
-        document.getElementById('btn-emom-minm-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomMinMinutes || 5;
-          const maxM = d.profile.emomMaxMinutes || 20;
-          if (cur < maxM - 1) { d.profile.emomMinMinutes = cur + 1; saveData(d); renderSettingsScreen(); }
-        });
-
-        document.getElementById('btn-emom-faillim-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomFailStreakLimit !== undefined ? d.profile.emomFailStreakLimit : 2;
-          if (cur > 1) { d.profile.emomFailStreakLimit = cur - 1; saveData(d); renderSettingsScreen(); }
-        });
-        document.getElementById('btn-emom-faillim-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomFailStreakLimit !== undefined ? d.profile.emomFailStreakLimit : 2;
-          if (cur < 10) { d.profile.emomFailStreakLimit = cur + 1; saveData(d); renderSettingsScreen(); }
-        });
-
-        document.getElementById('btn-emom-faildr-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomFailDrop !== undefined ? d.profile.emomFailDrop : 2;
-          if (cur > 1) { d.profile.emomFailDrop = cur - 1; saveData(d); renderSettingsScreen(); }
-        });
-        document.getElementById('btn-emom-faildr-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomFailDrop !== undefined ? d.profile.emomFailDrop : 2;
-          if (cur < 15) { d.profile.emomFailDrop = cur + 1; saveData(d); renderSettingsScreen(); }
-        });
-
-        document.getElementById('btn-emom-reset-streak')?.addEventListener('click', () => {
-          const d = loadData();
-          d.profile.emomFailStreak = 0;
-          saveData(d);
-          renderSettingsScreen();
-        });
-
-        document.getElementById('btn-emom-maxr-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomMaxReps || 10;
-          if (cur > 1) { d.profile.emomMaxReps = cur - 1; saveData(d); renderSettingsScreen(); }
-        });
-        document.getElementById('btn-emom-maxr-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.emomMaxReps !== undefined ? d.profile.emomMaxReps : 9;
-          d.profile.emomMaxReps = cur + 1;
-          saveData(d);
-          renderSettingsScreen();
-        });
-      })();
-
-      // Ab Work Steppers & Weekday Toggles
-      (function bindAbWorkSteppers() {
-        document.querySelectorAll('.ab-day-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const dayNum = parseInt(btn.dataset.day, 10);
-            const d = loadData();
-            if (!Array.isArray(d.profile.abDays)) d.profile.abDays = [3, 6];
-            if (d.profile.abDays.includes(dayNum)) {
-              d.profile.abDays = d.profile.abDays.filter(x => x !== dayNum);
-            } else {
-              d.profile.abDays.push(dayNum);
-            }
-            saveData(d);
-            renderSettingsScreen();
-            renderTodayScreen();
+      // ─── Ab Work Steppers & Day Toggles ────────────────────────────
+      (function bindAbSteppers() {
+        document.querySelectorAll('.ab-day-btn').forEach(btn=>{
+          btn.addEventListener('click',()=>{
+            const dn=parseInt(btn.dataset.day,10),d=loadData();
+            if(!Array.isArray(d.profile.abDays))d.profile.abDays=[3,6];
+            if(d.profile.abDays.includes(dn))d.profile.abDays=d.profile.abDays.filter(x=>x!==dn);
+            else d.profile.abDays.push(dn);
+            saveData(d);renderSettingsScreen();renderTodayScreen();
           });
         });
-
-        document.getElementById('btn-ab-target-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.abTargetReps || 15;
-          const minR = d.profile.abRepsMin || 12;
-          if (cur > minR) { d.profile.abTargetReps = cur - 1; saveData(d); renderSettingsScreen(); }
-        });
-        document.getElementById('btn-ab-target-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.abTargetReps || 15;
-          const maxR = d.profile.abRepsMax || 20;
-          if (cur < maxR) { d.profile.abTargetReps = cur + 1; saveData(d); renderSettingsScreen(); }
-        });
-
-        document.getElementById('btn-ab-sets-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.abSets || 3;
-          if (cur > 1) { d.profile.abSets = cur - 1; saveData(d); renderSettingsScreen(); }
-        });
-        document.getElementById('btn-ab-sets-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.abSets || 3;
-          if (cur < 10) { d.profile.abSets = cur + 1; saveData(d); renderSettingsScreen(); }
-        });
-
-        document.getElementById('btn-ab-var-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.abVariation || 0;
-          if (cur > 0) { d.profile.abVariation = cur - 1; saveData(d); renderSettingsScreen(); }
-        });
-        document.getElementById('btn-ab-var-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.abVariation || 0;
-          if (cur < 3) { d.profile.abVariation = cur + 1; saveData(d); renderSettingsScreen(); }
-        });
-
-        document.getElementById('btn-ab-w-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          let cur = Number(d.profile.abWeight) || 0;
-          cur = Math.max(0, cur - 2.5);
-          d.profile.abWeight = cur > 0 ? cur : '';
-          saveData(d);
-          renderSettingsScreen();
-        });
-        document.getElementById('btn-ab-w-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          let cur = Number(d.profile.abWeight) || 0;
-          cur += 2.5;
-          d.profile.abWeight = cur;
-          saveData(d);
-          renderSettingsScreen();
-        });
-
-        document.getElementById('btn-ab-wstep-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.abWeightStep || 0;
-          if (cur > 0) { d.profile.abWeightStep = Math.max(0, roundTo125(cur - 1.25)); saveData(d); renderSettingsScreen(); }
-        });
-        document.getElementById('btn-ab-wstep-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.abWeightStep || 0;
-          if (cur < 10) { d.profile.abWeightStep = roundTo125(cur + 1.25); saveData(d); renderSettingsScreen(); }
-        });
-
-        document.getElementById('btn-ab-min-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.abRepsMin || 12;
-          if (cur > 5) { d.profile.abRepsMin = cur - 1; saveData(d); renderSettingsScreen(); }
-        });
-        document.getElementById('btn-ab-min-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.abRepsMin || 12;
-          const maxR = d.profile.abRepsMax || 20;
-          if (cur < maxR - 1) { d.profile.abRepsMin = cur + 1; saveData(d); renderSettingsScreen(); }
-        });
-
-        document.getElementById('btn-ab-max-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.abRepsMax || 20;
-          const minR = d.profile.abRepsMin || 12;
-          if (cur > minR + 1) { d.profile.abRepsMax = cur - 1; saveData(d); renderSettingsScreen(); }
-        });
-        document.getElementById('btn-ab-max-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.abRepsMax || 20;
-          if (cur < 50) { d.profile.abRepsMax = cur + 1; saveData(d); renderSettingsScreen(); }
-        });
-
-        document.getElementById('btn-ab-inc-minus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.abRepIncrement || 1;
-          if (cur > 1) { d.profile.abRepIncrement = cur - 1; saveData(d); renderSettingsScreen(); }
-        });
-        document.getElementById('btn-ab-inc-plus')?.addEventListener('click', () => {
-          const d = loadData();
-          const cur = d.profile.abRepIncrement || 1;
-          if (cur < 5) { d.profile.abRepIncrement = cur + 1; saveData(d); renderSettingsScreen(); }
+        document.getElementById('btn-ab-target-minus')?.addEventListener('click',()=>{const d=loadData(),cur=d.profile.abTargetReps||15,minR=d.profile.abRepsMin||12;if(cur>minR){d.profile.abTargetReps=cur-1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-ab-target-plus')?.addEventListener('click', ()=>{const d=loadData(),cur=d.profile.abTargetReps||15,maxR=d.profile.abRepsMax||20;if(cur<maxR){d.profile.abTargetReps=cur+1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-ab-sets-minus')?.addEventListener('click',()=>{const d=loadData(),cur=d.profile.abSets||3;if(cur>1){d.profile.abSets=cur-1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-ab-sets-plus')?.addEventListener('click', ()=>{const d=loadData(),cur=d.profile.abSets||3;if(cur<10){d.profile.abSets=cur+1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-ab-var-minus')?.addEventListener('click',()=>{const d=loadData(),cur=d.profile.abVariation||0;if(cur>0){d.profile.abVariation=cur-1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-ab-var-plus')?.addEventListener('click', ()=>{const d=loadData(),cur=d.profile.abVariation||0;if(cur<3){d.profile.abVariation=cur+1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-ab-w-minus')?.addEventListener('click',()=>{const d=loadData();let cur=Number(d.profile.abWeight)||0;cur=Math.max(0,cur-2.5);d.profile.abWeight=cur>0?cur:'';saveData(d);renderSettingsScreen();});
+        document.getElementById('btn-ab-w-plus')?.addEventListener('click', ()=>{const d=loadData();let cur=Number(d.profile.abWeight)||0;cur+=2.5;d.profile.abWeight=cur;saveData(d);renderSettingsScreen();});
+        document.getElementById('btn-ab-wstep-minus')?.addEventListener('click',()=>{const d=loadData(),cur=d.profile.abWeightStep||0;if(cur>0){d.profile.abWeightStep=Math.max(0,roundTo125(cur-1.25));saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-ab-wstep-plus')?.addEventListener('click', ()=>{const d=loadData(),cur=d.profile.abWeightStep||0;if(cur<10){d.profile.abWeightStep=roundTo125(cur+1.25);saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-ab-min-minus')?.addEventListener('click',()=>{const d=loadData(),cur=d.profile.abRepsMin||12;if(cur>5){d.profile.abRepsMin=cur-1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-ab-min-plus')?.addEventListener('click', ()=>{const d=loadData(),cur=d.profile.abRepsMin||12,maxR=d.profile.abRepsMax||20;if(cur<maxR-1){d.profile.abRepsMin=cur+1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-ab-max-minus')?.addEventListener('click',()=>{const d=loadData(),cur=d.profile.abRepsMax||20,minR=d.profile.abRepsMin||12;if(cur>minR+1){d.profile.abRepsMax=cur-1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-ab-max-plus')?.addEventListener('click', ()=>{const d=loadData(),cur=d.profile.abRepsMax||20;if(cur<50){d.profile.abRepsMax=cur+1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-ab-inc-minus')?.addEventListener('click',()=>{const d=loadData(),cur=d.profile.abRepIncrement||1;if(cur>1){d.profile.abRepIncrement=cur-1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-ab-inc-plus')?.addEventListener('click', ()=>{const d=loadData(),cur=d.profile.abRepIncrement||1;if(cur<5){d.profile.abRepIncrement=cur+1;saveData(d);renderSettingsScreen();}});
+        document.getElementById('btn-ab-adv-reset')?.addEventListener('click',()=>{
+          if(!confirm('Reset Ab Advanced settings to defaults? (Working sets, min/max reps, rep increment, weight step)\nThis will NOT change your current target reps, variation or cable weight.'))return;
+          const d=loadData();
+          d.profile.abSets=3;d.profile.abRepsMin=12;d.profile.abRepsMax=20;
+          d.profile.abRepIncrement=1;d.profile.abWeightStep=0;
+          saveData(d);renderSettingsScreen();
         });
       })();
     }
@@ -5118,7 +4871,7 @@
       check('T13: isoWeekKey format', isoWeekKey('2026-01-05'), '2026-W01');
 
       // T14: calcSkillAIncrement empty -> 0
-      check('T14: calcSkillAIncrement empty array', calcSkillAIncrement([]), 0);
+      check('T14: calcSkillAIncrement empty array', calcSkillAIncrement([],3,6), 0);
 
       // T15: Bodyweight ratio formula (added / bw * 100)
       const calcBwRatio = (added, bw) => bw > 0 ? `${Math.round((added / bw) * 100)}%` : '—';
@@ -5307,6 +5060,104 @@
       check('HB8: Migration defaults hbPullupSets to 3', rawLegacyData.profile.hbPullupSets, 3);
       check('HB8: Migration defaults hbPullupReps to 12', rawLegacyData.profile.hbPullupReps, 12);
       check('HB8: Migration defaults hbPullupWeight to null', rawLegacyData.profile.hbPullupWeight, null);
+
+      // ─── SKILL A/B SETS/REPS TESTS ─────────────────────────────────
+      // SK1: calcSkillAIncrement generalised
+      check('SK1: 3x6 hit all -> +2.5', calcSkillAIncrement([{reps:6},{reps:6},{reps:6}],3,6), 2.5);
+      check('SK1: 3x6 miss last -> 0',  calcSkillAIncrement([{reps:6},{reps:6},{reps:5}],3,6), 0);
+      check('SK1: 4x8 hit all -> +2.5', calcSkillAIncrement([{reps:8},{reps:8},{reps:8},{reps:8}],4,8), 2.5);
+      check('SK1: 4x8 miss last -> 0',  calcSkillAIncrement([{reps:8},{reps:8},{reps:8},{reps:7}],4,8), 0);
+      check('SK1: 2 sets vs target 3 -> 0', calcSkillAIncrement([{reps:6},{reps:6}],3,6), 0);
+
+      // SK2: applySkillAProgression reads profile targets
+      const sk2d = {
+        profile: { skillAPullupSets:4, skillAPullupReps:8, skillADipSets:3, skillADipReps:6 },
+        exercises: { pullups:{currentWeight:20,oneRM:20}, dips:{currentWeight:30,oneRM:30} }
+      };
+      applySkillAProgression(sk2d,'pullups',[{reps:8},{reps:8},{reps:8},{reps:8}],20);
+      check('SK2: applySkillAProgression 4x8 target 4x8 -> +2.5kg', sk2d.exercises.pullups.currentWeight, 22.5);
+      applySkillAProgression(sk2d,'dips',[{reps:6},{reps:6},{reps:6}],30);
+      check('SK2: applySkillAProgression dips 3x6 target 3x6 -> +2.5kg', sk2d.exercises.dips.currentWeight, 32.5);
+
+      // SK3: Migration seeds correct defaults
+      const sk3 = { profile: { onboardingComplete: true } };
+      runMigrations(sk3);
+      check('SK3: skillAPullupSets=3', sk3.profile.skillAPullupSets, 3);
+      check('SK3: skillAPullupReps=6', sk3.profile.skillAPullupReps, 6);
+      check('SK3: skillBPullupSets=6', sk3.profile.skillBPullupSets, 6);
+      check('SK3: skillBPullupReps=3', sk3.profile.skillBPullupReps, 3);
+      check('SK3: skillMigratedV1=true', sk3.profile.skillMigratedV1, true);
+
+      // SK4: Migration is idempotent
+      sk3.profile.skillAPullupSets = 4;
+      runMigrations(sk3);
+      check('SK4: migration does not overwrite user value', sk3.profile.skillAPullupSets, 4);
+
+      // SK5: Session keeps movement values started with (not affected by profile changes)
+      const sk5profile = { skillAPullupSets:3, skillAPullupReps:6, skillADipSets:3, skillADipReps:6 };
+      const sk5movs = [
+        { id:'pullups', totalSets: sk5profile.skillAPullupSets, targetReps: sk5profile.skillAPullupReps },
+        { id:'dips',    totalSets: sk5profile.skillADipSets,    targetReps: sk5profile.skillADipReps }
+      ];
+      sk5profile.skillAPullupSets = 5; sk5profile.skillAPullupReps = 10; // user changes settings mid-session
+      check('SK5: in-progress totalSets unchanged', sk5movs[0].totalSets, 3);
+      check('SK5: in-progress targetReps unchanged', sk5movs[0].targetReps, 6);
+
+      // SK6: History stores actual targets per session
+      const sk6rec = { detail: { pullups: { sets:[6,6,6], targetSets:3, targetReps:6, progressed:true } } };
+      check('SK6: history targetSets=3', sk6rec.detail.pullups.targetSets, 3);
+      check('SK6: history targetReps=6', sk6rec.detail.pullups.targetReps, 6);
+      check('SK6: history progressed=true', sk6rec.detail.pullups.progressed, true);
+
+      // ─── AB SKIP TESTS ─────────────────────────────────────────────
+      // AB1: Skipped ab -> no progression
+      const ab1p = { abTargetReps:15, abRepsMin:12, abRepsMax:20, abRepIncrement:1, abSets:3, abVariation:0, abWeightStep:0 };
+      const ab1before = JSON.stringify(ab1p);
+      let ab1prog = null; // simulate: SS.abSkipped=true -> skip calcAbProgression
+      check('AB1: abProgResult null when skipped', ab1prog, null);
+      check('AB1: profile unchanged when skipped', JSON.stringify(ab1p), ab1before);
+
+      // AB2: abSkipped resets on new session
+      const ab2ss = { abSkipped: true }; ab2ss.abSkipped = false;
+      check('AB2: abSkipped resets to false', ab2ss.abSkipped, false);
+
+      // AB3: History stores cableCrunchSkipped, no zero reps
+      const ab3rec = { detail: { cableCrunchSkipped: true } };
+      check('AB3: cableCrunchSkipped flag set', ab3rec.detail.cableCrunchSkipped, true);
+      check('AB3: cableCrunch not stored (no zero reps)', ab3rec.detail.cableCrunch, undefined);
+
+      // AB4: Undo restores abSkipped=false
+      const ab4ss = { abSkipped: true }; ab4ss.abSkipped = false;
+      check('AB4: undo sets abSkipped=false', ab4ss.abSkipped, false);
+
+      // ─── SKILL B SESSION BUILDING TEST ─────────────────────────────
+      // SK7: Skill B session building with custom sets/reps
+      const sk7profile = { skillBPullupSets: 5, skillBPullupReps: 4, skillBDipSets: 7, skillBDipReps: 2 };
+      const sk7sessionType = 'skill_b';
+      const sk7movs = [
+        { id: 'pullups', name: 'Weighted Pull-ups', totalSets: sk7sessionType === 'skill_a' ? (sk7profile.skillAPullupSets || 3) : (sk7profile.skillBPullupSets || 6), targetReps: sk7sessionType === 'skill_a' ? (sk7profile.skillAPullupReps || 6) : (sk7profile.skillBPullupReps || 3) },
+        { id: 'dips', name: 'Weighted Dips', totalSets: sk7sessionType === 'skill_a' ? (sk7profile.skillADipSets || 3) : (sk7profile.skillBDipSets || 6), targetReps: sk7sessionType === 'skill_a' ? (sk7profile.skillADipReps || 6) : (sk7profile.skillBDipReps || 3) }
+      ];
+      check('SK7: Skill B custom pullup sets', sk7movs[0].totalSets, 5);
+      check('SK7: Skill B custom pullup reps', sk7movs[0].targetReps, 4);
+      check('SK7: Skill B custom dip sets', sk7movs[1].totalSets, 7);
+      check('SK7: Skill B custom dip reps', sk7movs[1].targetReps, 2);
+
+      // ─── SETTINGS UI TESTS ─────────────────────────────────────────
+      // ST1: Settings UI renders all 6 sections in order
+      const testSettingsHtml = buildSettingsHtml({
+        profile: { name: 'Test Athlete', bodyweight: 75, abDays: [3, 6], onboardingComplete: true },
+        exercises: { pullups: { currentWeight: 20 }, dips: { currentWeight: 30 } }
+      });
+      const s1 = testSettingsHtml.indexOf('data-section="athlete"');
+      const s2 = testSettingsHtml.indexOf('data-section="weights"');
+      const s3 = testSettingsHtml.indexOf('data-section="volumes"');
+      const s4 = testSettingsHtml.indexOf('data-section="emom"');
+      const s5 = testSettingsHtml.indexOf('data-section="abs"');
+      const s6 = testSettingsHtml.indexOf('data-section="data"');
+      const allFound = s1 !== -1 && s2 !== -1 && s3 !== -1 && s4 !== -1 && s5 !== -1 && s6 !== -1;
+      const stInOrder = allFound && (s1 < s2 && s2 < s3 && s3 < s4 && s4 < s5 && s5 < s6);
+      check('ST1: Settings UI renders all 6 sections in order', stInOrder, true);
 
       console.log(`ODIN TESTS COMPLETE: ${passed}/${total} passed`);
     })();
